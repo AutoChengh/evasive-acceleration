@@ -23,16 +23,10 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 A representative merging interaction.
 
 <p align="center">
-  <img src="assets/gifs/InD_16_tracks_35_37.gif" alt="InD case 35-37" width="90%">
-</p>
-
-A representative naturalistic interaction case.
-
-<p align="center">
   <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
 </p>
 
-A representative urban interaction from the SinD dataset.
+A representative urban interaction from the SIND dataset.
 
 ### Reconstructed crash cases
 
