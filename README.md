@@ -14,20 +14,45 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 ---
 ## Visual overview
 
-### Representative EA cases
+### Naturalistic interactions
 
 <p align="center">
-  <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="InD case 266-267" width="31%">
-  <img src="assets/gifs/InD_16_tracks_35_37.gif" alt="InD case 35-37" width="31%">
-  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="31%">
+  <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="InD case 266-267" width="90%">
 </p>
+
+A representative merging interaction.
 
 <p align="center">
-  <img src="assets/gifs/crash614_sideswipe.gif" alt="Crash 614 sideswipe" width="31%">
-  <img src="assets/gifs/crash_647_rear-end.gif" alt="Crash 647 rear-end" width="31%">
-  <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="31%">
+  <img src="assets/gifs/InD_16_tracks_35_37.gif" alt="InD case 35-37" width="90%">
 </p>
 
+A representative naturalistic interaction case.
+
+<p align="center">
+  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
+</p>
+
+A representative urban interaction from the SinD dataset.
+
+### Reconstructed crash cases
+
+<p align="center">
+  <img src="assets/gifs/crash614_sideswipe.gif" alt="Crash 614 sideswipe" width="90%">
+</p>
+
+A reconstructed sideswipe crash case.
+
+<p align="center">
+  <img src="assets/gifs/crash_647_rear-end.gif" alt="Crash 647 rear-end" width="90%">
+</p>
+
+A reconstructed rear-end crash case.
+
+<p align="center">
+  <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
+</p>
+
+A reconstructed T-bone crash case.
 ## Overview
 
 Evasive Acceleration (EA) quantifies driving risk as the minimum constant relative acceleration required to make a predicted interaction collision-free over a finite horizon. Unlike time-to-collision (TTC)-based methods, EA evaluates risk in a two-dimensional joint-motion space rather than through one-dimensional temporal proximity.
