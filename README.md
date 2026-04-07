@@ -14,7 +14,7 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 ---
 ## Visual overview
 
-### Naturalistic interactions
+### Representative EA cases
 
 <p align="center">
   <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="InD case 266-267" width="31%">
@@ -23,23 +23,9 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 </p>
 
 <p align="center">
-  <sub>InD merging case</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub>InD interaction case</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub>SinD Tianjin case</sub>
-</p>
-
-### Reconstructed crash cases
-
-<p align="center">
   <img src="assets/gifs/crash614_sideswipe.gif" alt="Crash 614 sideswipe" width="31%">
   <img src="assets/gifs/crash_647_rear-end.gif" alt="Crash 647 rear-end" width="31%">
   <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="31%">
-</p>
-
-<p align="center">
-  <sub>Sideswipe crash</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub>Rear-end crash</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub>T-bone crash</sub>
 </p>
 
 ## Overview
