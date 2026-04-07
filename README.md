@@ -12,6 +12,13 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 > You can place these assets under `assets/gifs/` and embed them here later.
 
 ---
+## Visual overview
+
+<p align="center">
+  <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="Representative EA case" width="900">
+</p>
+
+A representative merging interaction in which EA rises before effective yielding and then declines once the evasive manoeuvre becomes sufficient to reduce the interaction risk.
 
 ## Overview
 
