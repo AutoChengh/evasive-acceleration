@@ -12,7 +12,7 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
   <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
 </p>
 
-A representative urban interaction from the SinD dataset.  
+A representative high-risk intersection interaction from the SIND dataset, involving one vehicle and one motorcycle.  
 **The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 ### Reconstructed Crash Cases
