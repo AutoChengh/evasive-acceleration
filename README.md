@@ -4,374 +4,389 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 
 ---
 
-## Visual overview
+## Visual Overview
 
-### Naturalistic interactions
+### Naturalistic Interactions
 
 <p align="center">
   <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="InD case 266-267" width="90%">
 </p>
 
-A representative merging interaction. In the EA visualizations, the **red arrow** is the EA vector in relative-acceleration space. Its **magnitude** is the EA value itself. A longer red arrow indicates that a larger instantaneous evasive effort is required to restore safety, and therefore indicates a higher instantaneous risk level.
+A representative merging interaction.  
+**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 <p align="center">
   <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
 </p>
 
-A representative urban interaction from the SinD dataset. Again, the **EA value equals the magnitude of the red arrow**. The longer the red arrow, the larger the required evasive acceleration, and the higher the risk.
+A representative urban interaction from the SinD dataset.  
+**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
-### Reconstructed crash cases
+### Reconstructed Crash Cases
 
 <p align="center">
   <img src="assets/gifs/crash614_sideswipe.gif" alt="Crash 614 sideswipe" width="90%">
 </p>
 
-A reconstructed sideswipe crash case.
+A reconstructed sideswipe crash case.  
+**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 <p align="center">
   <img src="assets/gifs/crash_647_rear-end.gif" alt="Crash 647 rear-end" width="90%">
 </p>
 
-A reconstructed rear-end crash case.
+A reconstructed rear-end crash case.  
+**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 <p align="center">
   <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
 </p>
 
-A reconstructed T-bone crash case.
+A reconstructed T-bone crash case.  
+**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 ---
 
 ## Overview
 
-Evasive Acceleration (EA) quantifies instantaneous driving risk as the minimum constant relative acceleration required to make a predicted interaction collision-free. Unlike time-to-collision (TTC)-based methods, EA evaluates risk in a two-dimensional relative-motion space rather than through one-dimensional temporal proximity alone.
+Evasive Acceleration (EA) quantifies driving risk as the minimum constant relative acceleration required to make a predicted interaction collision-free. Unlike time-to-collision (TTC)-based methods, EA evaluates risk in a two-dimensional joint-motion space rather than through one-dimensional temporal proximity alone.
 
-This repository provides a research implementation of EA together with baseline risk metrics and practical utilities for both real-time and offline use.
-
-The codebase supports two complementary usage modes:
+This repository provides an implementation of EA for two practical use cases:
 
 1. **Single-frame computation**  
-   Intended for real-time applications such as online risk monitoring, reinforcement learning, and closed-loop simulation, where the current state of two road users is given and the EA value of that single frame is needed immediately.
+   For real-time or instant-evaluation scenarios, such as online risk monitoring, reinforcement learning, and other applications that need the EA value of the current frame immediately.
 
 2. **Batch computation**  
-   Intended for offline processing of multi-frame trajectory datasets stored in CSV files, where EA and baseline risk metrics are computed frame by frame over an entire interaction sequence.
+   For offline processing of trajectory datasets, where EA and baseline metrics are computed frame by frame from CSV files.
+
+In addition to EA, the repository also includes a set of baseline risk metrics for comparison, as well as visualization utilities for rendering interaction cases as GIFs.
 
 ---
 
 ## Why EA?
 
-Most existing traffic risk metrics are based on the TTC paradigm. TTC-based methods quantify risk mainly through a single temporal dimension, even though real traffic interactions are inherently two-dimensional and directional.
+Most existing risk metrics in autonomous driving are built around the TTC paradigm. These methods quantify risk mainly through a single temporal dimension, even though real traffic interactions are inherently two-dimensional and directional.
 
 This mismatch can lead to two common issues:
 
 - interactions with substantially different avoidance difficulty may receive similar TTC-like values;
-- risk may continue to appear to increase even after an effective evasive manoeuvre has already started to resolve the conflict.
+- risk may appear to keep increasing even after an effective evasive manoeuvre has already started resolving the conflict.
 
-EA addresses this limitation by quantifying the minimum instantaneous intervention required for collision avoidance in two-dimensional relative-acceleration space.
+EA addresses this by measuring the minimum instantaneous intervention required to make the interaction collision-free. It reframes risk as the physical effort needed to restore safety, rather than as time remaining under nominal motion.
 
 ---
 
-## Repository structure
+## Repository Structure
 
 ```text
 evasive-acceleration/
 ├── README.md
 ├── LICENSE
-├── requirements.txt
+├── .gitignore
 ├── assets/
 │   └── gifs/
+├── demo_data/
 ├── src/
 │   ├── core_ea.py
 │   ├── baseline_risk_metrics.py
 │   ├── single_frame.py
 │   └── batch_compute.py
-├── demo_data/
-│   └── ...
 └── visualization/
-    └── ...
 ```
 
-### Main files
+### Main Components
 
-- `src/core_ea.py`  
-  Core implementation of EA. This file contains the main numerical solver, the mode-specific EA computations, and the final EA aggregation.
+#### `src/core_ea.py`
 
-- `src/baseline_risk_metrics.py`  
-  Baseline and auxiliary risk metrics, such as TTC, TTC2D, ACT, DRAC, EI, InDepth, and MEI.
+Core implementation of EA. This file contains the main EA solver, the four motion-mode evaluations, and the final aggregated EA computation.
 
-- `src/single_frame.py`  
-  Lightweight single-frame interface for real-time use. This file wraps the core EA solver and allows users to compute EA directly from the current instantaneous states of two road users.
+#### `src/baseline_risk_metrics.py`
 
-- `src/batch_compute.py`  
-  Batch-processing script for CSV trajectory files. This file is intended for offline computation over full interaction sequences.
+Baseline risk metrics used for comparison, such as TTC, TTC2D, ACT, DRAC, MEI, and related quantities.
 
-- `demo_data/`  
-  Example CSV files for quick testing.
+#### `src/single_frame.py`
 
-- `visualization/`  
-  Visualization scripts for generating GIFs and related visual outputs.
+Entry script for single-frame EA computation. This is the recommended starting point for users who want to compute EA directly from the current instantaneous states of two road users.
+
+#### `src/batch_compute.py`
+
+Entry script for batch computation on CSV files. This is used to process trajectory datasets frame by frame and write the computed results back to output files.
+
+#### `demo_data/`
+
+Example data for quick testing.
+
+#### `visualization/`
+
+Visualization scripts for rendering trajectory cases and exporting GIFs.
+
+#### `assets/gifs/`
+
+GIFs displayed in this README.
 
 ---
 
-## Installation
+## Input Definition
 
-### 1. Clone the repository
+EA is computed from the instantaneous states of two road users.
 
-```bash
-git clone https://github.com/AutoChengh/evasive-acceleration.git
-cd evasive-acceleration
+Each road user is represented by **7 parameters**.
+
+### Required 7 Parameters for Each Road User
+
+For road user \( i \in \{A, B\} \), the input is:
+
+```text
+(x_i, y_i, v_i, h_i, L_i, W_i, ω_i)
 ```
 
-### 2. Install dependencies
+where:
 
-```bash
-pip install -r requirements.txt
+- `x_i`: global x position `[m]`
+- `y_i`: global y position `[m]`
+- `v_i`: speed magnitude `[m/s]`
+- `h_i`: heading angle `[rad]`
+- `L_i`: body length `[m]`
+- `W_i`: body width `[m]`
+- `ω_i`: yaw rate `[rad/s]`
+
+So one interaction frame consists of **14 values in total**.
+
+### Command-Line Order
+
+In this repository, the order for each road user is always:
+
+```text
+x y speed heading length width yaw_rate
 ```
 
-If `numba` is installed successfully, some computations may run faster. The implementation is designed to remain numerically consistent with or without `numba`.
+---
+
+## Notes on Yaw Rate Input
+
+Some trajectory datasets do not provide yaw rate directly. In that case, users can estimate yaw rate from the historical heading sequence by a simple finite-difference step. In practice, a small amount of smoothing or filtering is recommended to reduce numerical jitter.
+
+### Recommended Guidance
+
+- If both interacting road users do not exhibit noticeable turning behaviour, you may directly set:
+
+```text
+yaw_rate = 0
+```
+
+In such cases, the impact on EA is usually negligible.
+
+- If either road user is clearly turning, it is recommended to provide a more accurate yaw-rate input for EA computation.
+
+This is especially important when the interaction geometry is strongly influenced by rotation.
+
+---
+
+## Applicability to Vulnerable Road Users
+
+The method is not limited to cars. It can also be applied directly to vulnerable road users (VRUs) such as:
+
+- cyclists
+- pedestrians
+
+The input format remains exactly the same. The main difference is simply that the body dimensions are smaller, so the corresponding length and width values should reflect the physical size of the target road user.
 
 ---
 
 ## Usage
 
-This repository supports two main workflows:
+### 1. Single-Frame Computation
 
-1. **Single-frame computation** for real-time or interactive use
-2. **Batch computation** for offline CSV-based dataset processing
+Use `src/single_frame.py` when you want the EA value of the current frame only.
 
-The recommended order for new users is:
-
-1. start with the single-frame interface;
-2. then run the batch computation on an example CSV file;
-3. finally use the visualization scripts if needed.
-
----
-
-## Required state input for each road user
-
-EA takes the current instantaneous state of **two road users**. For **each** road user, the following **7 parameters** are required:
-
-\[
-(x,\; y,\; v,\; h,\; l,\; w,\; \omega)
-\]
-
-where:
-
-- \(x\): global x position, in **m**
-- \(y\): global y position, in **m**
-- \(v\): speed magnitude, in **m/s**
-- \(h\): heading angle, in **rad**
-- \(l\): object length, in **m**
-- \(w\): object width, in **m**
-- \(\omega\): yaw rate, in **rad/s**
-
-Therefore, a two-road-user interaction requires the following **14 scalar inputs** in total:
-
-\[
-(x_A,\; y_A,\; v_A,\; h_A,\; l_A,\; w_A,\; \omega_A,\;
-x_B,\; y_B,\; v_B,\; h_B,\; l_B,\; w_B,\; \omega_B)
-\]
-
-### Practical note on yaw rate
-
-Some trajectory datasets do not directly provide yaw rate. In that case, users can compute it from past heading values using a small finite-difference module. In practice, it is also advisable to apply a small amount of smoothing or filtering to reduce numerical jitter.
-
-A practical guideline is:
-
-- if **both** interacting road users do **not** exhibit obvious turning behaviour, setting `yawrate = 0` usually has little effect on the EA result;
-- once one or both road users are involved in noticeable turning behaviour, it is recommended to provide a reasonably accurate yaw-rate input for EA computation.
-
-### Applicability to vulnerable road users
-
-The same interface can be used directly for **vulnerable road users (VRUs)** such as pedestrians and cyclists. The input format is unchanged; the main difference is simply that their physical dimensions (`length`, `width`) are smaller.
-
----
-
-## 1. Single-frame computation
-
-Use `src/single_frame.py` when the current instantaneous states of two road users are already known and the EA value for that single frame is needed immediately.
-
-This is the recommended interface for:
+This mode is suitable for:
 
 - online risk monitoring
-- reinforcement learning environments
-- real-time simulation
-- interactive analysis of one traffic scene
+- reinforcement learning
+- real-time evaluation
+- instant inspection of one interaction state
 
-### Example
+#### 1.1 Run the Built-In Example
 
-```python
-from single_frame import (
-    RoadUserState,
-    SingleFrameEAConfig,
-    compute_single_frame_ea,
-    compute_single_frame_ea_result,
-)
-
-state_a = RoadUserState(
-    x=0.0,
-    y=0.0,
-    v=10.0,
-    heading=0.0,
-    length=4.5,
-    width=1.8,
-    yaw_rate=0.0,
-)
-
-state_b = RoadUserState(
-    x=20.0,
-    y=0.0,
-    v=8.0,
-    heading=3.141592653589793,
-    length=4.7,
-    width=1.9,
-    yaw_rate=0.0,
-)
-
-config = SingleFrameEAConfig()
-
-ea = compute_single_frame_ea(state_a, state_b, config)
-print("EA =", ea)
+```bash
+python src/single_frame.py
 ```
 
-### Example with detailed output
+This runs the built-in example case in `single_frame.py` and prints:
 
-```python
-result = compute_single_frame_ea_result(state_a, state_b, config)
-
-print("EA =", result.ea)
-print("Elapsed time (s) =", result.elapsed_seconds)
-print("Mode-specific values =", result.mode_dict)
+```text
+EA = ...
+Runtime = ...
 ```
 
-### Returned quantities
+#### 1.2 Run With Your Own Input
 
-The single-frame interface can provide:
+```bash
+python src/single_frame.py \
+  --agent-a 0 0 10 0 4.5 1.8 0 \
+  --agent-b 20 0 8 3.1415926 4.7 1.9 0
+```
 
-- the final EA value;
-- the four mode-specific EA values:
-  - `EA_CTCT`
-  - `EA_CTCV`
-  - `EA_CVCT`
-  - `EA_CVCV`
-- runtime for the current call.
+The order for each road user is:
+
+```text
+x y speed heading length width yaw_rate
+```
+
+#### 1.3 Meaning of the Example Above
+
+For agent A:
+
+- position = `(0, 0)` m
+- speed = `10` m/s
+- heading = `0` rad
+- size = `4.5 × 1.8` m
+- yaw rate = `0` rad/s
+
+For agent B:
+
+- position = `(20, 0)` m
+- speed = `8` m/s
+- heading = `π` rad
+- size = `4.7 × 1.9` m
+- yaw rate = `0` rad/s
+
+#### 1.4 Output
+
+The terminal output is intentionally minimal:
+
+```text
+EA = ...
+Runtime = ...
+```
 
 ---
 
-## 2. Batch computation
+### 2. Batch Computation
 
-Use `src/batch_compute.py` when processing complete interaction sequences stored as CSV files.
+Use `src/batch_compute.py` when you want to process a CSV file or a set of trajectory cases frame by frame.
 
-This is the recommended workflow for:
+This mode is suitable for:
 
-- offline dataset analysis
-- large-scale evaluation
-- frame-by-frame processing of trajectory sequences
-- generating result CSV files for later visualization or analysis
+- offline trajectory-dataset analysis
+- frame-wise processing over many files
+- comparison between EA and baseline metrics
+- exporting computed results for further study
 
-### Input data
-
-Example input files are placed in:
-
-```text
-demo_data/
-```
-
-These CSV files should contain the state variables required by the batch-processing script. In general, each row corresponds to one frame of a two-road-user interaction and provides the quantities needed by the EA solver and the baseline metrics.
-
-### Run the batch script
-
-From the repository root:
+#### 2.1 Run Batch Computation
 
 ```bash
 python src/batch_compute.py
 ```
 
-Depending on the current configuration of `batch_compute.py`, the script will typically:
+#### 2.2 Typical Workflow
 
-1. read one or more CSV files from `demo_data/`;
-2. compute EA and baseline risk metrics frame by frame;
-3. write the processed results to output CSV files.
+1. Prepare the input CSV files.
+2. Place them in `demo_data/` or another target directory.
+3. Check the input/output path settings in `src/batch_compute.py`.
+4. Run the script.
+5. Inspect the generated output CSV files.
 
-### Typical outputs
+#### 2.3 Important Note
 
-The batch script may write out quantities such as:
+Batch-processing workflows are often dataset-specific. Before applying the script to a new dataset, please check:
 
-- final EA
-- four mode-specific EA values
-- TTC
-- TTC2D
-- ACT
-- DRAC
-- EI
-- InDepth
-- MEI
-- other related geometric or kinematic quantities used by the implementation
+- file path settings
+- file-selection logic
+- expected input column names
+- output file naming logic
 
-Please check the current input path, output path, and file naming logic inside `src/batch_compute.py`, since these may be explicitly configured there.
+inside `src/batch_compute.py`.
 
 ---
 
-## 3. Visualization
+### 3. Visualization
 
-Visualization scripts are placed in:
+Use the scripts in `visualization/` to render interaction cases and export GIFs.
 
-```text
-visualization/
-```
+These utilities are intended for:
 
-These scripts are used to generate GIFs or other visual outputs from trajectory data and computed results.
+- qualitative inspection of interaction geometry
+- visualization of risk evolution over time
+- generation of GIF assets for analysis or presentation
 
-Typical use cases include:
+#### Typical Workflow
 
-- visualizing road-user trajectories;
-- visualizing risk evolution over time;
-- generating GIFs for representative interaction cases.
+1. Prepare the corresponding CSV case.
+2. Run the target visualization script in `visualization/`.
+3. Inspect the generated images or GIFs.
 
-Please refer to the corresponding script in `visualization/` for the expected input format and output location.
+The visualizations are kept separate from the solver so that users interested only in computation do not need the plotting workflow.
 
 ---
 
-## Method summary
+## What the Code Computes
 
-EA is computed from four motion-model combinations:
+### EA
+
+The final EA value is computed as the arithmetic mean of four motion-mode-specific values:
 
 - `EA_CTCT`
 - `EA_CTCV`
 - `EA_CVCT`
 - `EA_CVCV`
 
-The final EA is defined as the arithmetic mean of these four mode-specific values.
+These correspond to different short-horizon nominal motion assumptions.
 
-In the current implementation:
+### Baseline Metrics
 
-- CTCT, CTCV, and CVCT are solved numerically;
-- CVCV is solved analytically with prerequisite logic inherited from the current implementation.
+The repository also includes several baseline risk metrics for comparison, such as:
 
-This repository keeps the original research-oriented structure of the solver while exposing two practical interfaces:
+- `TTC`
+- `TTC2D`
+- `ACT`
+- `DRAC`
+- `MEI`
 
-- a **single-frame interface** in `single_frame.py`;
-- a **batch-computation interface** in `batch_compute.py`.
+These are implemented separately from the EA core solver.
 
 ---
 
-## Library requirements
+## Recommended Usage by Scenario
 
-The codebase requires standard scientific Python libraries. The main dependencies are:
+Use `single_frame.py` if you need:
+
+- real-time EA evaluation
+- online risk monitoring
+- reinforcement learning reward or constraint computation
+- a lightweight interface for the current frame only
+
+Use `batch_compute.py` if you need:
+
+- offline analysis of trajectory datasets
+- frame-wise computation over many CSV files
+- large-scale comparison between EA and baseline metrics
+- export of computed results for further analysis
+
+---
+
+## Library Requirements
+
+This repository is written in Python.
+
+### Core Libraries
+
+The codebase requires:
 
 - `numpy`
 - `pandas`
 - `matplotlib`
 - `Pillow`
-- `numba` *(optional, for acceleration)*
 
-Install them with:
+### Optional Acceleration
 
-```bash
-pip install -r requirements.txt
-```
+- `numba`
 
-If you prefer manual installation, a typical setup is:
+If `numba` is installed, some computations can be accelerated.
+
+If it is not installed, the code still runs; only the execution speed may differ.
+
+### Installation Example
 
 ```bash
 pip install numpy pandas matplotlib pillow numba
@@ -379,49 +394,39 @@ pip install numpy pandas matplotlib pillow numba
 
 ---
 
-## Notes
+## Practical Notes
 
-- `single_frame.py` is an interface layer. It does not duplicate the EA solver. The core EA logic remains in `core_ea.py`.
-- `batch_compute.py` is the offline processing entry point for multi-frame CSV data.
-- `baseline_risk_metrics.py` contains non-EA risk indicators and related supporting computations.
-- For scenes without clear turning behaviour, `yawrate = 0` is usually acceptable.
-- For scenes with clear turning behaviour, more accurate yaw-rate input is recommended.
+- `core_ea.py` is the main EA engine of this repository.
+- `single_frame.py` is a lightweight entry script built on top of `core_ea.py`.
+- `batch_compute.py` is the offline batch-processing entry script.
+- `baseline_risk_metrics.py` contains comparison metrics and related helper logic.
+- Visualization is intentionally separated from solver logic.
 
 ---
 
-## Citation
+## Citation and Repository Reference
 
-If you use this repository in academic work, please cite both the corresponding paper and the GitHub repository where appropriate.
+If you use this repository in academic work, please cite the corresponding paper when available.
 
-### Suggested GitHub citation
+To reference the code repository itself, please cite or mention:
 
-**AutoChengh.** *evasive-acceleration*. GitHub repository.  
-Available at: [https://github.com/AutoChengh/evasive-acceleration](https://github.com/AutoChengh/evasive-acceleration)
+```text
+AutoChengh. Evasive Acceleration (EA): A two-dimensional paradigm for instantaneous driving risk quantification. GitHub repository. https://github.com/AutoChengh/evasive-acceleration
+```
 
-### BibTeX entry for the repository
+A BibTeX-style repository entry can be written as:
 
 ```bibtex
-@misc{autochengh_evasive_acceleration_github,
+@misc{autochengh_ea_github,
   author       = {AutoChengh},
-  title        = {evasive-acceleration},
+  title        = {Evasive Acceleration (EA): A two-dimensional paradigm for instantaneous driving risk quantification},
   year         = {2026},
   howpublished = {\url{https://github.com/AutoChengh/evasive-acceleration}},
   note         = {GitHub repository}
 }
 ```
 
-### Paper citation
-
-If the corresponding paper is available, please also cite it using its official bibliographic information.
-
-```bibtex
-@article{your_ea_paper,
-  title   = {Evasive Acceleration: A Two-Dimensional Paradigm for Instantaneous Driving Risk Quantification},
-  author  = {...},
-  journal = {...},
-  year    = {...}
-}
-```
+You may adjust the year as needed to match the public release year of the repository.
 
 ---
 
