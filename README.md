@@ -9,13 +9,6 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 ### Naturalistic Interactions
 
 <p align="center">
-  <img src="assets/gifs/InD_05_tracks_266_267.gif" alt="InD case 266-267" width="90%">
-</p>
-
-A representative merging interaction.  
-**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
-
-<p align="center">
   <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
 </p>
 
@@ -23,20 +16,6 @@ A representative urban interaction from the SinD dataset.
 **The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 ### Reconstructed Crash Cases
-
-<p align="center">
-  <img src="assets/gifs/crash614_sideswipe.gif" alt="Crash 614 sideswipe" width="90%">
-</p>
-
-A reconstructed sideswipe crash case.  
-**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
-
-<p align="center">
-  <img src="assets/gifs/crash_647_rear-end.gif" alt="Crash 647 rear-end" width="90%">
-</p>
-
-A reconstructed rear-end crash case.  
-**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 <p align="center">
   <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
