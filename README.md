@@ -383,32 +383,6 @@ pip install numpy pandas matplotlib pillow numba
 
 ---
 
-## Citation and Repository Reference
-
-If you use this repository in academic work, please cite the corresponding paper when available.
-
-To reference the code repository itself, please cite or mention:
-
-```text
-AutoChengh. Evasive Acceleration (EA): A two-dimensional paradigm for instantaneous driving risk quantification. GitHub repository. https://github.com/AutoChengh/evasive-acceleration
-```
-
-A BibTeX-style repository entry can be written as:
-
-```bibtex
-@misc{autochengh_ea_github,
-  author       = {AutoChengh},
-  title        = {Evasive Acceleration (EA): A two-dimensional paradigm for instantaneous driving risk quantification},
-  year         = {2026},
-  howpublished = {\url{https://github.com/AutoChengh/evasive-acceleration}},
-  note         = {GitHub repository}
-}
-```
-
-You may adjust the year as needed to match the public release year of the repository.
-
----
-
 ## License
 
 This project is released under the license provided in `LICENSE`.
