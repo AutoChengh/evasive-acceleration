@@ -21,7 +21,7 @@ A representative high-risk intersection interaction from the SIND dataset, invol
   <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
 </p>
 
-A reconstructed T-bone crash case.  
+A T-bone collision case from the CIMSS-TA database.   
 **The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
 
 ---
