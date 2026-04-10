@@ -1,3 +1,4 @@
+import argparse
 import glob
 import os
 import time
@@ -15,7 +16,7 @@ from analytical_core import ANALYTICAL_OUTPUT_COLUMNS, compute_real_time_metrics
 # ============================================================================
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT_DIR = os.path.dirname(SRC_DIR)
-DEMO_DATA_DIR = os.path.join(PROJECT_ROOT_DIR, "demo_data")
+DEFAULT_INPUT_DIR = os.path.join(PROJECT_ROOT_DIR, "demo_data")
 
 
 # ============================================================================
@@ -57,6 +58,31 @@ REQUIRED_COLS = [
 ]
 
 
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments.
+
+    By default, the script processes all eligible CSV files under demo_data/.
+    Users may optionally specify a custom input directory.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Batch-compute EA and baseline analytical metrics for all eligible CSV "
+            "files in a target directory."
+        )
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=str,
+        default=DEFAULT_INPUT_DIR,
+        help=(
+            "Directory containing input CSV files. "
+            f"Default: {DEFAULT_INPUT_DIR}"
+        ),
+    )
+    return parser.parse_args()
+
+
 def to_float_or_nan(value) -> float:
     """Convert a value to float; return NaN if conversion fails."""
     try:
@@ -75,6 +101,7 @@ def round_output_value(value) -> float:
 def make_output_csv_path(csv_path: str, suffix: str = OUTPUT_SUFFIX) -> str:
     """
     Construct the output CSV path by appending '_{suffix}' before the extension.
+
     Example:
         input.csv -> input_EA.csv
     """
@@ -105,7 +132,7 @@ def remove_existing_output_columns(df: pd.DataFrame) -> pd.DataFrame:
         "EA_CTCV",
         "EA_CTCT",
         "EA",
-        "EA_CV_Analytical",  # remove any legacy column from older outputs
+        "EA_CV_Analytical",  # Remove any legacy column from older outputs.
     ] + ANALYTICAL_OUTPUT_COLUMNS
 
     existing = [col for col in cols_to_drop_if_exist if col in df.columns]
@@ -149,8 +176,6 @@ def process_one_csv(csv_path: str) -> Dict[str, float]:
     2. computes the four EA modes and final EA for each valid frame,
     3. computes the analytical metrics from analytical_core,
     4. saves a new CSV without overwriting the original file.
-
-    Input CSVs are expected to be under demo_data/, which is a sibling folder of src/.
     """
     file_t0 = time.perf_counter()
 
@@ -354,25 +379,34 @@ def process_one_csv(csv_path: str) -> Dict[str, float]:
 
 
 def main() -> None:
-    """Batch-process all eligible CSV files in demo_data/."""
+    """
+    Batch-process all eligible CSV files in the target input directory.
+
+    If no custom directory is provided from the command line, the script uses
+    demo_data/ by default.
+    """
+    args = parse_args()
+    input_dir = os.path.abspath(args.input_dir)
+
     batch_t0 = time.perf_counter()
 
-    if not os.path.isdir(DEMO_DATA_DIR):
-        print(f"demo_data directory was not found: {DEMO_DATA_DIR}")
+    if not os.path.isdir(input_dir):
+        print(f"Input directory was not found: {input_dir}")
         return
 
-    all_csv_files = sorted(glob.glob(os.path.join(DEMO_DATA_DIR, "*.csv")))
+    all_csv_files = sorted(glob.glob(os.path.join(input_dir, "*.csv")))
     csv_files = [
         f for f in all_csv_files
         if not os.path.basename(f).endswith(f"_{OUTPUT_SUFFIX}.csv")
     ]
 
     if not csv_files:
-        print(f"No eligible input CSV files were found in: {DEMO_DATA_DIR}")
+        print(f"No eligible input CSV files were found in: {input_dir}")
         return
 
     print(f"Source script directory: {SRC_DIR}")
-    print(f"Input CSV directory: {DEMO_DATA_DIR}")
+    print(f"Project root directory: {PROJECT_ROOT_DIR}")
+    print(f"Input CSV directory: {input_dir}")
     print("Discovered CSV files:")
     for f in csv_files:
         print(" -", f)
