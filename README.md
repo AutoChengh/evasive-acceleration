@@ -90,10 +90,16 @@ Run the built-in single-frame example:
 python src/single_frame.py
 ```
 
-For batch processing on example data:
+Run batch computation on the default example data in `demo_data/`:
 
 ```bash
 python src/batch_compute.py
+```
+
+Run batch computation on your own CSV directory:
+
+```bash
+python src/batch_compute.py --input-dir path/to/your/csvs
 ```
 
 If you want to visualize a case, run one of the scripts in `visualization/`.
@@ -172,19 +178,21 @@ The terminal output reports the EA value for the current interaction state.
 ### 2. Batch Computation
 Use `src/batch_compute.py` to process CSV files or trajectory cases frame by frame. This is suitable for dataset analysis and comparison between EA and baseline metrics.
 
-**Run Batch Computation:**
+**Run on the default example data:**
 ```bash
 python src/batch_compute.py
 ```
 
-**Typical Workflow:**
-1. Place your input CSV files in `demo_data/` (or your target directory).
-2. Check the input/output path settings inside `src/batch_compute.py`.
-3. Run the script and inspect the generated output files.
+**Run on your own CSV directory:**
+```bash
+python src/batch_compute.py --input-dir path/to/your/csvs
+```
 
-The batch script assumes that the input CSV files contain the state variables required by the EA solver for both interacting road users. Before using a new dataset, please check the expected column names and file-path settings inside `src/batch_compute.py`.
+If no input directory is provided, the script uses `demo_data/` by default.
 
-The output typically includes frame-wise EA values and baseline metrics written to a new CSV file.
+The batch script assumes that the input CSV files contain the state variables required by the EA solver for both interacting road users. Before using a new dataset, please check the expected column names inside `src/batch_compute.py`.
+
+The output typically includes frame-wise EA values and baseline metrics written to a new CSV file in the same directory as the input file.
 
 ### 3. Visualization
 Use the scripts in `visualization/` to render interaction geometry and export GIFs.
