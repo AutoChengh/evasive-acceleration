@@ -7,6 +7,7 @@ A two-dimensional paradigm for instantaneous driving risk quantification.
 - [Overview](#overview)
 - [Why EA?](#why-ea)
 - [Installation & Requirements](#installation--requirements)
+- [Quick Start](#quick-start)
 - [Repository Structure](#repository-structure)
 - [Input Definition](#input-definition)
 - [Usage](#usage)
@@ -31,8 +32,8 @@ A representative high-risk intersection interaction from the SIND dataset, invol
 <p align="center">
   <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
 </p>
-A T-bone collision case from the CIMSS-TA database.   
-**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
+A T-bone crash case from the CIMSS-TA database.  
+**Again, the EA value equals the magnitude of the red arrow.**
 
 ---
 
@@ -48,7 +49,7 @@ This repository provides an implementation of EA for two practical use cases:
 
 ## Why EA?
 
-Most existing risk metrics in autonomous driving are built around the TTC paradigm. These methods quantify risk mainly through a single temporal dimension, even though real traffic interactions are inherently two-dimensional.
+Most existing risk metrics in autonomous driving are built around the TTC paradigm. These methods quantify risk mainly through a single temporal dimension, even though real traffic interactions are inherently two-dimensional and directional.
 
 This mismatch can lead to two common issues:
 - Interactions with substantially different avoidance difficulty may receive similar TTC-like values.
@@ -70,7 +71,7 @@ The codebase requires the following dependencies:
 - `Pillow`
 
 ### Optional Acceleration
-We highly recommend installing `numba`. If `numba` is installed, some core computations will be significantly accelerated. The code will still run without it, but execution speed will be reduced.
+Installing `numba` is strongly recommended for faster computation. The code will still run without it, but execution speed will be reduced.
 
 ### Quick Install
 You can install all required and recommended libraries via pip:
@@ -81,19 +82,37 @@ pip install numpy pandas matplotlib pillow numba
 
 ---
 
+## Quick Start
+
+Run the built-in single-frame example:
+
+```bash
+python src/single_frame.py
+```
+
+For batch processing on example data:
+
+```bash
+python src/batch_compute.py
+```
+
+If you want to visualize a case, run one of the scripts in `visualization/`.
+
+---
+
 ## Repository Structure
 
 To keep things simple, here are the core components you need to care about:
 
 ```text
 evasive-acceleration/
-├── demo_data/                # Example CSV data for quick batch testing
+├── demo_data/                    # Example CSV data for quick batch testing
 ├── src/
-│   ├── core_ea.py            # Core EA solver and motion-mode evaluations
-│   ├── baseline_risk_metrics.py  # TTC, ACT, DRAC, MEI implementations
-│   ├── single_frame.py       # Entry script for instant single-frame evaluation
-│   └── batch_compute.py      # Entry script for processing full trajectory datasets
-└── visualization/            # Scripts for rendering cases and exporting GIFs
+│   ├── core_ea.py               # Core EA solver and motion-mode evaluations
+│   ├── baseline_risk_metrics.py # TTC, ACT, DRAC, MEI implementations
+│   ├── single_frame.py          # Entry script for instant single-frame evaluation
+│   └── batch_compute.py         # Entry script for processing full trajectory datasets
+└── visualization/               # Scripts for rendering cases and exporting GIFs
 ```
 
 ---
@@ -103,7 +122,7 @@ evasive-acceleration/
 EA is computed from the instantaneous states of two road users. Each road user is represented by **7 parameters**.
 
 ### Required 7 Parameters
-For road user i in {A, B}, the input is:
+For road user i in {A, B}, the input is:  
 `(x_i, y_i, v_i, h_i, L_i, W_i, ω_i)`
 
 where:
@@ -120,7 +139,7 @@ So one interaction frame consists of **14 values in total**.
 **Command-Line Order:** `x y speed heading length width yaw_rate`
 
 ### Notes on Yaw Rate Input
-Some trajectory datasets do not provide yaw rate directly. You can estimate it from the historical heading sequence by a finite-difference step (smoothing recommended).
+Some trajectory datasets do not provide yaw rate directly. You can estimate it from the historical heading sequence by a finite-difference step; light smoothing is recommended to reduce numerical jitter.
 - If both road users do not exhibit noticeable turning behaviour, you may set `yaw_rate = 0`.
 - If either road user is clearly turning, it is highly recommended to provide an accurate yaw-rate input.
 
@@ -145,25 +164,36 @@ python src/single_frame.py \
   --agent-a 0 0 10 0 4.5 1.8 0 \
   --agent-b 20 0 8 3.1415926 4.7 1.9 0
 ```
-*(Agent A is at (0,0) moving at 10m/s. Agent B is at (20,0) moving at 8m/s in the opposite direction).*
+
+*(Agent A is at `(0, 0)` moving at `10 m/s`. Agent B is at `(20, 0)` moving at `8 m/s` in the opposite direction.)*
+
+The terminal output reports the EA value for the current interaction state.
 
 ### 2. Batch Computation
-Use `src/batch_compute.py` to process CSV files or trajectory cases frame by frame. Ideal for dataset analysis and comparing EA with baselines.
+Use `src/batch_compute.py` to process CSV files or trajectory cases frame by frame. This is suitable for dataset analysis and comparison between EA and baseline metrics.
 
 **Run Batch Computation:**
 ```bash
 python src/batch_compute.py
 ```
+
 **Typical Workflow:**
 1. Place your input CSV files in `demo_data/` (or your target directory).
 2. Check the input/output path settings inside `src/batch_compute.py`.
 3. Run the script and inspect the generated output files.
 
+The batch script assumes that the input CSV files contain the state variables required by the EA solver for both interacting road users. Before using a new dataset, please check the expected column names and file-path settings inside `src/batch_compute.py`.
+
+The output typically includes frame-wise EA values and baseline metrics written to a new CSV file.
+
 ### 3. Visualization
 Use the scripts in `visualization/` to render interaction geometry and export GIFs.
+
 1. Prepare the corresponding CSV case.
 2. Run the target visualization script.
 3. Inspect the generated images or GIFs.
+
+Visualization is kept separate from the EA solver, so users interested only in computation do not need the plotting workflow.
 
 ---
 
