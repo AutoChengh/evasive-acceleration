@@ -272,7 +272,7 @@ For comparison, the repository also includes several baseline risk metrics imple
 If you find this repository useful, please cite the paper:
 
 ```bibtex
-@article{cheng2026ea,
+@article{cheng2026driving,
   title={Driving risk emerges from the required two-dimensional joint evasive acceleration},
   author={Cheng, Hao and Jiang, Yanbo and Yu, Wenhao and Zhou, Rui and Bian, Jiang and Chen, Keyu and Liu, Zhiyuan and Huang, Heye and Zhang, Hailun and Zhang, Fang and Wang, Jianqiang and Zheng, Sifa},
   journal={arXiv preprint arXiv:2604.17841},
@@ -280,6 +280,10 @@ If you find this repository useful, please cite the paper:
   doi={10.48550/arXiv.2604.17841}
 }
 ```
+
+Plain-text citation:
+
+> Cheng H, Jiang Y, Yu W, et al. Driving risk emerges from the required two-dimensional joint evasive acceleration[J]. arXiv preprint arXiv:2604.17841, 2026.
 
 Paper link: https://arxiv.org/abs/2604.17841
 
