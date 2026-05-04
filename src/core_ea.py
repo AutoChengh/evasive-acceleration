@@ -33,6 +33,11 @@ __all__ = [
 ]
 
 
+def _cross2d(a: np.ndarray, b: np.ndarray) -> float:
+    """Return the scalar cross product of two 2D vectors."""
+    return float(a[0] * b[1] - a[1] * b[0])
+
+
 # ============================================================================
 # Default numerical configuration
 # ============================================================================
@@ -1058,7 +1063,7 @@ def _compute_ttc2d_for_analytical_cvcv(
 
         dot = float(np.dot(v2, v3))
         if abs(dot) < 1e-10:
-            if abs(np.cross(v1, v2)) < 1e-10:
+            if abs(_cross2d(v1, v2)) < 1e-10:
                 t0 = float(np.dot(segment_start - ray_origin, ray_direction) / (ray_norm ** 2))
                 t1 = float(np.dot(segment_end - ray_origin, ray_direction) / (ray_norm ** 2))
                 if t0 >= 0 and t1 >= 0:
@@ -1068,7 +1073,7 @@ def _compute_ttc2d_for_analytical_cvcv(
                 return 0.0
             return None
 
-        t1 = float(np.cross(v2, v1) / dot)
+        t1 = float(_cross2d(v2, v1) / dot)
         t2 = float(np.dot(v1, v3) / dot)
         if 0 <= t2 <= 1:
             return t1

@@ -113,7 +113,14 @@ Installing `numba` is strongly recommended for faster computation. The code will
 ### Quick Install
 
 ```bash
-pip install numpy pandas matplotlib pillow numba
+pip install -r requirements.txt
+```
+
+If you do not want optional JIT acceleration, install only the core runtime
+libraries:
+
+```bash
+pip install numpy pandas matplotlib pillow
 ```
 
 ---
@@ -132,13 +139,21 @@ Run batch computation on the default example data in `demo_data/`:
 python src/batch_compute.py
 ```
 
+By default, generated CSV files are written to `outputs/batch_results/`.
+
 Run batch computation on your own CSV directory:
 
 ```bash
 python src/batch_compute.py --input-dir path/to/your/csvs
 ```
 
-If you want to visualize a case, run one of the scripts in `visualization/`.
+Visualize the generated batch outputs:
+
+```bash
+python visualization/visualize_tracks_to_gif.py
+```
+
+By default, GIF files are written to `outputs/gifs/`.
 
 ---
 
@@ -147,12 +162,15 @@ If you want to visualize a case, run one of the scripts in `visualization/`.
 ```text
 evasive-acceleration/
 ├── demo_data/                    # Example CSV data for quick batch testing
+├── assets/gifs/                  # Pre-rendered qualitative examples for README
 ├── src/
 │   ├── core_ea.py               # Core EA solver and motion-mode evaluations
 │   ├── baseline_risk_metrics.py # Baseline metrics for comparison
 │   ├── single_frame.py          # Entry script for instant single-frame evaluation
 │   └── batch_compute.py         # Entry script for trajectory-level batch processing
-└── visualization/               # Scripts for rendering cases and exporting GIFs
+├── visualization/               # Scripts for rendering cases and exporting GIFs
+├── tests/                       # Lightweight smoke tests
+└── requirements.txt             # Python dependencies
 ```
 
 ---
@@ -188,6 +206,24 @@ Some trajectory datasets do not provide yaw rate directly. In that case, it can 
 ### Applicability to Vulnerable Road Users (VRUs)
 EA can also be applied to cyclists and pedestrians. The input format stays the same; only the geometric dimensions (`length` and `width`) need to be adapted to the corresponding road user.
 
+### Required Batch CSV Columns
+
+`src/batch_compute.py` expects one row per interaction frame and the following
+columns:
+
+| Agent A column | Agent B column | Unit |
+|---|---|---|
+| `Position X (m)` | `2_Position X (m)` | m |
+| `Position Y (m)` | `2_Position Y (m)` | m |
+| `Velocity (m/s)` | `2_Velocity (m/s)` | m/s |
+| `Heading` | `2_Heading` | rad |
+| `Length (m)` | `2_Length (m)` | m |
+| `Width (m)` | `2_Width (m)` | m |
+| `Yawrate` | `2_Yawrate` | rad/s |
+
+Additional columns such as timestamps, IDs, accelerations, and labels are
+preserved in the output CSV.
+
 ---
 
 ## Usage
@@ -213,6 +249,13 @@ Example interpretation:
 
 The terminal output reports the EA value for the current interaction state.
 
+Expected output for the built-in example is approximately:
+
+```text
+EA = 4.828
+Runtime = ...
+```
+
 ### 2. Batch Computation
 Use `src/batch_compute.py` to process trajectory cases frame by frame. This is suitable for dataset analysis and comparison between EA and baseline metrics.
 
@@ -228,17 +271,36 @@ python src/batch_compute.py --input-dir path/to/your/csvs
 
 If no input directory is provided, the script uses `demo_data/` by default.
 
-The batch script assumes that the input CSV files contain the state variables required by the EA solver for both interacting road users. Before using a new dataset, please check the expected column names inside `src/batch_compute.py`.
+Generated CSV files are written to `outputs/batch_results/` by default, so the
+input data remain unchanged. To choose another output directory:
 
-The output typically includes frame-wise EA values and baseline metrics written to a new CSV file in the same directory as the input file.
+```bash
+python src/batch_compute.py --input-dir path/to/your/csvs --output-dir path/to/results
+```
+
+The batch script skips files ending in `_EA.csv` to avoid reprocessing its own
+outputs.
 
 ### 3. Visualization
-Use the scripts in `visualization/` to render interaction geometry and export GIFs.
+Use `visualization/visualize_tracks_to_gif.py` to render interaction geometry
+and export GIFs after running batch computation.
 
 Typical workflow:
-1. Prepare the corresponding CSV case.
-2. Run the target visualization script.
-3. Inspect the generated images or GIFs.
+1. Prepare the input CSV case.
+2. Run `python src/batch_compute.py`.
+3. Run `python visualization/visualize_tracks_to_gif.py`.
+4. Inspect generated GIFs under `outputs/gifs/`.
+
+Useful options:
+
+```bash
+python visualization/visualize_tracks_to_gif.py \
+  --input-dir outputs/batch_results \
+  --output-dir outputs/gifs \
+  --frame-step 2 \
+  --time-range 0.0 1.0 \
+  --ea-max 1.5
+```
 
 Visualization is intentionally kept separate from the core solver, so users interested only in computation do not need the plotting workflow.
 
@@ -256,6 +318,11 @@ The final EA value is computed as the arithmetic mean of four motion-mode-specif
 
 These correspond to different short-horizon nominal motion assumptions for the two interacting road users. The final reported EA is their average, which improves robustness across heterogeneous interaction patterns.
 
+The implementation exposes numerical search settings such as `T_total`,
+`dt_coarse`, `dt_fine`, `a_max`, and direction-grid sizes. These control the
+finite-horizon numerical solver and approximation accuracy; they are not
+dataset-specific tuning parameters for the EA definition itself.
+
 ### Baseline Metrics
 For comparison, the repository also includes several baseline risk metrics implemented in `baseline_risk_metrics.py`, including:
 
@@ -264,6 +331,34 @@ For comparison, the repository also includes several baseline risk metrics imple
 - `ACT`
 - `DRAC`
 - `MEI`
+
+Batch outputs append the following columns:
+
+| Column | Meaning |
+|---|---|
+| `EA_CVCV`, `EA_CVCT`, `EA_CTCV`, `EA_CTCT` | Mode-specific EA values |
+| `EA` | Arithmetic mean of the four mode-specific EA values |
+| `DRAC`, `TTC`, `TAdv`, `ACT`, `EI`, `MEI`, `TTC2D` | Baseline surrogate safety metrics |
+| `v_closest`, `Shortest_D`, `InDepth`, `DTC`, `v_norm` | Intermediate baseline quantities |
+| `BBox distance (m)`, `Centroid distance (m)` | Geometric distances |
+
+For baseline metrics, invalid or non-conflicting cases follow the normalization
+rules implemented in `baseline_risk_metrics.py`: some risk magnitudes are
+reported as `0`, while time-to-event quantities may be reported as `inf`.
+
+---
+
+## Development Checks
+
+Run the smoke tests with:
+
+```bash
+pip install pytest
+pytest
+```
+
+The tests verify that the single-frame demo returns a finite EA and that the
+batch pipeline writes the expected output columns for demo data.
 
 ---
 

@@ -23,6 +23,11 @@ GAMMA = 0.01396
 EPSILON = 1e-6
 
 
+def _cross2d(a: np.ndarray, b: np.ndarray) -> float:
+    """Return the scalar cross product of two 2D vectors."""
+    return float(a[0] * b[1] - a[1] * b[0])
+
+
 # ============================================================================
 # Collision detection
 # ============================================================================
@@ -747,7 +752,7 @@ def is_ray_intersect_segment(
 
     dot = float(np.dot(v2, v3))
     if abs(dot) < 1e-10:
-        if abs(np.cross(v1, v2)) < 1e-10:
+        if abs(_cross2d(v1, v2)) < 1e-10:
             t0 = float(np.dot(segment_start - ray_origin, ray_direction) / (ray_norm ** 2))
             t1 = float(np.dot(segment_end - ray_origin, ray_direction) / (ray_norm ** 2))
             if t0 >= 0 and t1 >= 0:
@@ -757,7 +762,7 @@ def is_ray_intersect_segment(
             return 0.0
         return None
 
-    t1 = float(np.cross(v2, v1) / dot)
+    t1 = float(_cross2d(v2, v1) / dot)
     t2 = float(np.dot(v1, v3) / dot)
     if 0 <= t2 <= 1:
         return t1
@@ -1049,8 +1054,8 @@ def main() -> None:
         x_B, y_B, v_B, h_B, l_B, w_B,
     )
 
-    print("analytical_core single-case demo")
-    print("--------------------------------")
+    print("baseline_risk_metrics single-case demo")
+    print("--------------------------------------")
     for key in ANALYTICAL_OUTPUT_COLUMNS:
         print(f"{key}: {result[key]}")
 

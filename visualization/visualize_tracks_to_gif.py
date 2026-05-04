@@ -6,21 +6,9 @@ visualize_tracks_to_gif.py
 
 Generate EA-colored GIF visualizations for interaction CSV files.
 
-This script assumes the following project layout:
-
-project_root/
-├─ demo_data/
-│  ├─ *_EA.csv
-├─ visualization/
-│  └─ visualize_tracks_to_gif.py
-
-Input:
-- CSV files are read from the sibling folder: ../demo_data/
-- Only files whose names end with "_EA.csv" are processed
-
-Output:
-- GIF files are saved to: ./gif_visualizations_by_EA/
-  i.e., inside the same "visualization" directory as this script
+By default, CSV files are read from ../outputs/batch_results/ and GIFs are
+written to ../outputs/gifs/. These locations can be changed from the command
+line.
 
 Main features:
 1. Read all matching CSV files from the demo_data folder
@@ -36,6 +24,7 @@ Main features:
 
 from __future__ import annotations
 
+import argparse
 import math
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional, Sequence, Tuple
@@ -62,15 +51,15 @@ from PIL import Image
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-INPUT_DIR = PROJECT_ROOT / "demo_data"
-OUTPUT_DIR = SCRIPT_DIR / "gif_visualizations_by_EA"
+DEFAULT_INPUT_DIR = PROJECT_ROOT / "outputs" / "batch_results"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "gifs"
 
 
 # ============================================================================
 # Visualization settings
 # ============================================================================
 
-FRAME_STEP = 1
+DEFAULT_FRAME_STEP = 1
 FIGSIZE = (7.2, 6.0)
 FIG_DPI = 220
 
@@ -79,7 +68,7 @@ FIG_DPI = 220
 # [0.0, 1.0] -> full sequence
 # [0.0, 0.6] -> first 60%
 # [0.2, 0.8] -> middle 60%
-VISUALIZE_TIME_RANGE = [0.0, 1.0]
+DEFAULT_VISUALIZE_TIME_RANGE = [0.0, 1.0]
 
 
 # Axis margins computed from the displayed frames only.
@@ -160,8 +149,7 @@ RISK_CMAP = LinearSegmentedColormap.from_list(
 )
 
 EA_MIN = 0.0
-EA_MAX = 1.5
-EA_NORM = Normalize(vmin=EA_MIN, vmax=EA_MAX)
+DEFAULT_EA_MAX = 1.5
 
 
 # ============================================================================
@@ -191,11 +179,30 @@ def clip_val(value: float, xmin: float, xmax: float) -> float:
     return max(xmin, min(xmax, value))
 
 
+def build_ea_color_mapper(ea_max: float) -> Tuple[Callable, Normalize]:
+    """Build an EA-to-color function and matching normalization."""
+    norm = Normalize(vmin=EA_MIN, vmax=float(ea_max))
+
+    def ea_to_rgba(ea_value, alpha: float = 1.0) -> Tuple[float, float, float, float]:
+        ea = clip_val(safe_float(ea_value, 0.0), EA_MIN, float(ea_max))
+        rgba = RISK_CMAP(norm(ea))
+        return (rgba[0], rgba[1], rgba[2], alpha)
+
+    return ea_to_rgba, norm
+
+
+def build_colorbar_ticks(ea_max: float) -> List[float]:
+    """Build compact colorbar ticks from 0 to ea_max."""
+    ea_max = float(ea_max)
+    if ea_max <= 0:
+        return [0.0]
+    return [round(x, 3) for x in np.linspace(0.0, ea_max, 4)]
+
+
 def ea_to_rgba(ea_value, alpha: float = 1.0) -> Tuple[float, float, float, float]:
     """Map EA value to RGBA color."""
-    ea = clip_val(safe_float(ea_value, 0.0), EA_MIN, EA_MAX)
-    rgba = RISK_CMAP(EA_NORM(ea))
-    return (rgba[0], rgba[1], rgba[2], alpha)
+    mapper, _ = build_ea_color_mapper(DEFAULT_EA_MAX)
+    return mapper(ea_value, alpha=alpha)
 
 
 # ============================================================================
@@ -813,9 +820,17 @@ def save_gif(
 # CSV processing
 # ============================================================================
 
-def process_single_csv(csv_path: Path) -> None:
+def process_single_csv(
+    csv_path: Path,
+    output_dir: Path,
+    *,
+    frame_step: int,
+    visualize_time_range: Sequence[float],
+    ea_max: float,
+) -> None:
     """Process one CSV file and export its EA-colored GIF."""
     csv_path = Path(csv_path)
+    output_dir = Path(output_dir)
     stem = csv_path.stem
     print(f"\nProcessing file: {csv_path}")
 
@@ -840,7 +855,7 @@ def process_single_csv(csv_path: Path) -> None:
         print("  No valid frames. Skipped.")
         return
 
-    sampled_frames, sampled_indices = apply_frame_step(frames, FRAME_STEP)
+    sampled_frames, sampled_indices = apply_frame_step(frames, frame_step)
     if len(sampled_frames) == 0:
         print("  No sampled frames. Skipped.")
         return
@@ -850,7 +865,7 @@ def process_single_csv(csv_path: Path) -> None:
     sampled_frames, sampled_indices, range_start_idx, range_end_idx_exclusive = apply_visualize_time_range(
         sampled_frames,
         sampled_indices,
-        VISUALIZE_TIME_RANGE,
+        visualize_time_range,
     )
 
     if len(sampled_frames) == 0:
@@ -892,7 +907,9 @@ def process_single_csv(csv_path: Path) -> None:
         posy2_col,
     )
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    ea_to_rgba_func, ea_norm = build_ea_color_mapper(ea_max)
 
     out_gif_ea = save_gif(
         stem=stem,
@@ -904,11 +921,11 @@ def process_single_csv(csv_path: Path) -> None:
         y_min=y_min,
         y_max=y_max,
         value_col=ea_col,
-        value_to_rgba_func=ea_to_rgba,
-        colorbar_norm=EA_NORM,
+        value_to_rgba_func=ea_to_rgba_func,
+        colorbar_norm=ea_norm,
         colorbar_cmap=RISK_CMAP,
         colorbar_label="EA",
-        colorbar_ticks=[0.0, 0.5, 1.0, 1.5],
+        colorbar_ticks=build_colorbar_ticks(ea_max),
         posx1_col=posx1_col,
         posy1_col=posy1_col,
         posx2_col=posx2_col,
@@ -922,7 +939,7 @@ def process_single_csv(csv_path: Path) -> None:
         vel1_col=vel1_col,
         vel2_col=vel2_col,
         show_speed_text=SHOW_SPEED_TEXT,
-        out_dir=OUTPUT_DIR,
+        out_dir=output_dir,
     )
 
     seq_times = [safe_float(row.get("time_actual", np.nan), np.nan) for row in sampled_frames]
@@ -936,10 +953,10 @@ def process_single_csv(csv_path: Path) -> None:
 
     print(f"  Total raw frames: {len(frames)}")
     print(f"  Total sampled frames before VISUALIZE_TIME_RANGE: {sampled_frames_before_range}")
-    print(f"  VISUALIZE_TIME_RANGE used: [{VISUALIZE_TIME_RANGE[0]}, {VISUALIZE_TIME_RANGE[1]}]")
+    print(f"  VISUALIZE_TIME_RANGE used: [{visualize_time_range[0]}, {visualize_time_range[1]}]")
     print(f"  Range slice on sampled frames: [{range_start_idx}:{range_end_idx_exclusive}]")
     print(f"  Total displayed frames after VISUALIZE_TIME_RANGE: {len(sampled_frames)}")
-    print(f"  Frame step: {FRAME_STEP}")
+    print(f"  Frame step: {frame_step}")
     print(f"  Axis limits from displayed range only: x=[{x_min:.3f}, {x_max:.3f}], y=[{y_min:.3f}, {y_max:.3f}]")
 
     if np.isfinite(median_dt):
@@ -959,33 +976,97 @@ def process_single_csv(csv_path: Path) -> None:
 # Entry point
 # ============================================================================
 
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Generate EA-colored GIFs from batch-computed *_EA.csv files."
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=DEFAULT_INPUT_DIR,
+        help=f"Directory containing *_EA.csv files. Default: {DEFAULT_INPUT_DIR}",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"Directory where GIF files will be written. Default: {DEFAULT_OUTPUT_DIR}",
+    )
+    parser.add_argument(
+        "--pattern",
+        type=str,
+        default="*_EA.csv",
+        help="Glob pattern for input CSV files. Default: *_EA.csv",
+    )
+    parser.add_argument(
+        "--frame-step",
+        type=int,
+        default=DEFAULT_FRAME_STEP,
+        help=f"Render every Nth frame. Default: {DEFAULT_FRAME_STEP}",
+    )
+    parser.add_argument(
+        "--time-range",
+        nargs=2,
+        type=float,
+        default=DEFAULT_VISUALIZE_TIME_RANGE,
+        metavar=("START_RATIO", "END_RATIO"),
+        help="Displayed time range as start/end ratios in [0, 1]. Default: 0 1",
+    )
+    parser.add_argument(
+        "--ea-max",
+        type=float,
+        default=DEFAULT_EA_MAX,
+        help=f"Upper bound for EA color normalization. Default: {DEFAULT_EA_MAX}",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     """Entry point."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    args = parse_args()
 
-    if not INPUT_DIR.exists():
-        print(f"Input directory does not exist: {INPUT_DIR}")
+    input_dir = Path(args.input_dir).resolve()
+    output_dir = Path(args.output_dir).resolve()
+    frame_step = max(1, int(args.frame_step))
+    visualize_time_range = [float(args.time_range[0]), float(args.time_range[1])]
+    ea_max = float(args.ea_max)
+    if ea_max <= 0:
+        raise ValueError("--ea-max must be strictly positive.")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not input_dir.exists():
+        print(f"Input directory does not exist: {input_dir}")
         return
 
-    csv_files = sorted(INPUT_DIR.glob("*_EA.csv"))
+    csv_files = sorted(input_dir.glob(args.pattern))
     if not csv_files:
-        print(f"No CSV files ending with '_EA.csv' found in: {INPUT_DIR}")
+        print(f"No CSV files matching '{args.pattern}' found in: {input_dir}")
         return
 
     print(f"Script directory: {SCRIPT_DIR}")
     print(f"Project root: {PROJECT_ROOT}")
-    print(f"Input directory: {INPUT_DIR}")
-    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Input directory: {input_dir}")
+    print(f"Output directory: {output_dir}")
 
     print(f"\nDetected {len(csv_files)} CSV file(s):")
     for file_path in csv_files:
         print(f"  - {file_path.name}")
 
-    print(f"VISUALIZE_TIME_RANGE = [{VISUALIZE_TIME_RANGE[0]}, {VISUALIZE_TIME_RANGE[1]}]")
+    print(f"VISUALIZE_TIME_RANGE = [{visualize_time_range[0]}, {visualize_time_range[1]}]")
+    print(f"FRAME_STEP = {frame_step}")
+    print(f"EA_MAX = {ea_max}")
 
     for csv_file in csv_files:
         try:
-            process_single_csv(csv_file)
+            process_single_csv(
+                csv_file,
+                output_dir,
+                frame_step=frame_step,
+                visualize_time_range=visualize_time_range,
+                ea_max=ea_max,
+            )
         except Exception as exc:
             print(f"[ERROR] Failed on file {csv_file.name}: {exc}")
 

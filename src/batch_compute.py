@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from core_ea import aggregate_ea_modes, compute_ea_modes
-from analytical_core import ANALYTICAL_OUTPUT_COLUMNS, compute_real_time_metrics
+from baseline_risk_metrics import ANALYTICAL_OUTPUT_COLUMNS, compute_real_time_metrics
 
 
 # ============================================================================
@@ -17,6 +17,7 @@ from analytical_core import ANALYTICAL_OUTPUT_COLUMNS, compute_real_time_metrics
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT_DIR = os.path.dirname(SRC_DIR)
 DEFAULT_INPUT_DIR = os.path.join(PROJECT_ROOT_DIR, "demo_data")
+DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT_DIR, "outputs", "batch_results")
 
 
 # ============================================================================
@@ -62,8 +63,8 @@ def parse_args() -> argparse.Namespace:
     """
     Parse command-line arguments.
 
-    By default, the script processes all eligible CSV files under demo_data/.
-    Users may optionally specify a custom input directory.
+    By default, the script processes all eligible CSV files under demo_data/
+    and writes generated files under outputs/batch_results/.
     """
     parser = argparse.ArgumentParser(
         description=(
@@ -79,6 +80,21 @@ def parse_args() -> argparse.Namespace:
             "Directory containing input CSV files. "
             f"Default: {DEFAULT_INPUT_DIR}"
         ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=DEFAULT_OUTPUT_DIR,
+        help=(
+            "Directory where output CSV files will be written. "
+            f"Default: {DEFAULT_OUTPUT_DIR}"
+        ),
+    )
+    parser.add_argument(
+        "--pattern",
+        type=str,
+        default="*.csv",
+        help="Glob pattern for input CSV files inside --input-dir. Default: *.csv",
     )
     return parser.parse_args()
 
@@ -98,18 +114,21 @@ def round_output_value(value) -> float:
     return round(float(value), ROUND_DECIMALS)
 
 
-def make_output_csv_path(csv_path: str, suffix: str = OUTPUT_SUFFIX) -> str:
+def make_output_csv_path(
+    csv_path: str,
+    output_dir: str,
+    suffix: str = OUTPUT_SUFFIX,
+) -> str:
     """
-    Construct the output CSV path by appending '_{suffix}' before the extension.
+    Construct the output CSV path under output_dir.
 
     Example:
-        input.csv -> input_EA.csv
+        input.csv -> outputs/batch_results/input_EA.csv
     """
-    folder = os.path.dirname(csv_path)
     base_name = os.path.basename(csv_path)
     stem, ext = os.path.splitext(base_name)
     new_name = f"{stem}_{suffix}{ext}"
-    return os.path.join(folder, new_name)
+    return os.path.join(output_dir, new_name)
 
 
 def validate_required_columns(df: pd.DataFrame, csv_path: str) -> None:
@@ -167,14 +186,14 @@ def has_missing_frame_inputs(frame_inputs: Dict[str, float]) -> bool:
     return any(pd.isna(v) for v in frame_inputs.values())
 
 
-def process_one_csv(csv_path: str) -> Dict[str, float]:
+def process_one_csv(csv_path: str, output_dir: str) -> Dict[str, float]:
     """
     Process one CSV file frame by frame.
 
     The function:
     1. reads the CSV,
     2. computes the four EA modes and final EA for each valid frame,
-    3. computes the analytical metrics from analytical_core,
+    3. computes the baseline analytical metrics,
     4. saves a new CSV without overwriting the original file.
     """
     file_t0 = time.perf_counter()
@@ -259,7 +278,7 @@ def process_one_csv(csv_path: str) -> Dict[str, float]:
             ea_ctct = mode_results.get("EA_CTCT", np.nan)
 
             # -----------------------------------------------------------------
-            # Other analytical metrics from analytical_core
+            # Other analytical metrics from baseline_risk_metrics
             # -----------------------------------------------------------------
             t_ana0 = time.perf_counter()
             analytical_vals = compute_real_time_metrics(
@@ -281,7 +300,7 @@ def process_one_csv(csv_path: str) -> Dict[str, float]:
 
             if len(analytical_vals) != len(ANALYTICAL_OUTPUT_COLUMNS):
                 raise ValueError(
-                    "analytical_core.compute_real_time_metrics returned "
+                    "baseline_risk_metrics.compute_real_time_metrics returned "
                     f"{len(analytical_vals)} values, but "
                     f"{len(ANALYTICAL_OUTPUT_COLUMNS)} were expected."
                 )
@@ -322,7 +341,8 @@ def process_one_csv(csv_path: str) -> Dict[str, float]:
     for col in ANALYTICAL_OUTPUT_COLUMNS:
         df[col] = analytical_result_lists[col]
 
-    output_csv_path = make_output_csv_path(csv_path, OUTPUT_SUFFIX)
+    os.makedirs(output_dir, exist_ok=True)
+    output_csv_path = make_output_csv_path(csv_path, output_dir, OUTPUT_SUFFIX)
     df.to_csv(output_csv_path, index=False, encoding="utf-8-sig")
 
     file_t1 = time.perf_counter()
@@ -382,11 +402,12 @@ def main() -> None:
     """
     Batch-process all eligible CSV files in the target input directory.
 
-    If no custom directory is provided from the command line, the script uses
-    demo_data/ by default.
+    If no custom directory is provided from the command line, the script reads
+    demo_data/ and writes generated outputs under outputs/batch_results/.
     """
     args = parse_args()
     input_dir = os.path.abspath(args.input_dir)
+    output_dir = os.path.abspath(args.output_dir)
 
     batch_t0 = time.perf_counter()
 
@@ -394,7 +415,7 @@ def main() -> None:
         print(f"Input directory was not found: {input_dir}")
         return
 
-    all_csv_files = sorted(glob.glob(os.path.join(input_dir, "*.csv")))
+    all_csv_files = sorted(glob.glob(os.path.join(input_dir, args.pattern)))
     csv_files = [
         f for f in all_csv_files
         if not os.path.basename(f).endswith(f"_{OUTPUT_SUFFIX}.csv")
@@ -407,6 +428,8 @@ def main() -> None:
     print(f"Source script directory: {SRC_DIR}")
     print(f"Project root directory: {PROJECT_ROOT_DIR}")
     print(f"Input CSV directory: {input_dir}")
+    print(f"Output CSV directory: {output_dir}")
+    print(f"Input pattern: {args.pattern}")
     print("Discovered CSV files:")
     for f in csv_files:
         print(" -", f)
@@ -421,7 +444,7 @@ def main() -> None:
 
     for csv_path in csv_files:
         try:
-            stat = process_one_csv(csv_path)
+            stat = process_one_csv(csv_path, output_dir)
             batch_total_frames += stat["total_frames"]
             batch_input_complete_frames += stat["input_complete_frames"]
             batch_computed_success_frames += stat["computed_success_frames"]
