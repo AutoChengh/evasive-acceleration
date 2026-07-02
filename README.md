@@ -369,10 +369,9 @@ If you find this repository useful, please cite the paper:
 ```bibtex
 @article{cheng2026driving,
   title={Driving risk emerges from the required two-dimensional joint evasive acceleration},
-  author={Cheng, Hao and Jiang, Yanbo and Yu, Wenhao and Zhou, Rui and Bian, Jiang and Chen, Keyu and Liu, Zhiyuan and Huang, Heye and Zhang, Hailun and Zhang, Fang and Wang, Jianqiang and Zheng, Sifa},
+  author={Cheng, Hao and Jiang, Yanbo and Yu, Wenhao and Zhou, Rui and Bian, Jiang and Chen, Keyu and Liu, Zhiyuan and Huang, Heye and Zhang, Hailun and Zhang, Fang and others},
   journal={arXiv preprint arXiv:2604.17841},
-  year={2026},
-  doi={10.48550/arXiv.2604.17841}
+  year={2026}
 }
 ```
 
