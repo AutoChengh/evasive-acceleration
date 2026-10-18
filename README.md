@@ -1,215 +1,145 @@
 # Evasive Acceleration (EA)
 
-A two-dimensional paradigm for instantaneous driving risk quantification.
+Compute two-dimensional interaction risk from the current states of two road
+users. EA measures the minimum constant relative acceleration needed to avoid
+predicted collision, in **m/s²**. Supply yaw rates directly, or estimate missing
+yaw rates from current and historical headings with the same EA solver.
 
-**Paper:** [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841)
+Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
----
+## Install and run
 
-## Table of Contents
-- [Visual Overview](#visual-overview)
-- [Overview](#overview)
-- [Why EA?](#why-ea)
-- [Key Highlights](#key-highlights)
-- [Installation \& Requirements](#installation--requirements)
-- [Quick Start](#quick-start)
-- [Repository Structure](#repository-structure)
-- [Input Definition](#input-definition)
-- [Usage](#usage)
-  - [1. Single-Frame Computation](#1-single-frame-computation)
-  - [2. Batch Computation](#2-batch-computation)
-  - [3. Visualization](#3-visualization)
-- [What the Code Computes](#what-the-code-computes)
-- [Citation](#citation)
-- [License](#license)
-
----
-
-## Visual Overview
-
-### Naturalistic Interactions
-<p align="center">
-  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin case" width="90%">
-</p>
-
-A representative high-risk intersection interaction from the SinD dataset, involving one vehicle and one motorcycle.  
-**The EA value is the magnitude of the red arrow shown in the visualization. A longer red arrow indicates a higher instantaneous risk level.**
-
-### Reconstructed Crash Cases
-<p align="center">
-  <img src="assets/gifs/crash_684_T-bone.gif" alt="Crash 684 T-bone" width="90%">
-</p>
-
-A reconstructed T-bone crash case from the CIMSS-TA database.  
-**Again, the EA value equals the magnitude of the red arrow.**
-
----
-
-## Overview
-
-Evasive Acceleration (EA) is a **two-dimensional risk quantification paradigm** for traffic interactions. It quantifies instantaneous driving risk as the **minimum constant relative acceleration required to make the interaction collision-free** over a short future interval of interest.
-
-Unlike time-to-collision (TTC) and most of its variants, EA does **not** quantify risk solely through one-dimensional temporal proximity. Instead, it evaluates risk directly in a **two-dimensional joint-motion space**, considering all possible directions of relative collision avoidance and retaining the least costly one.
-
-This repository provides a practical implementation of EA for:
-1. **Single-frame computation**, suitable for real-time risk monitoring, instant inspection, and reinforcement learning.
-2. **Batch computation**, suitable for frame-wise processing of trajectory datasets and comparison against baseline risk metrics.
-3. **Visualization**, for rendering interaction geometry and exporting GIFs for qualitative analysis.
-
----
-
-## Why EA?
-
-Across autonomous driving, TTC has long been the dominant benchmark for safety quantification. It shapes dataset curation, model training, testing pipelines, and even regulatory safety thinking. However, TTC fundamentally measures risk urgency through **only one temporal dimension**, whereas real traffic interactions are inherently **two-dimensional and multidirectional**.
-
-This dimensionality mismatch leads to two major problems:
-
-- **Limited risk informativeness**: scenes with substantially different avoidance difficulty can receive similar TTC-like values.
-- **Risk-time misalignment**: risk may appear to keep increasing until the instant just before a conflict resolves, and then jump discontinuously, producing a distorted safety gradient.
-
-EA addresses this by reframing risk as the **minimum instantaneous evasive cost required to restore safety**. It is defined in **relative motion space**, is **hyperparameter-free**, **physically interpretable**, and captures the continuous rise and dissipation of interaction risk more faithfully than TTC-style metrics.
-
----
-
-## Key Highlights
-
-- **A new risk quantification paradigm**  
-  EA is not just another TTC variant. It introduces a genuinely two-dimensional formulation of interaction risk based on the minimum required joint evasive acceleration.
-
-- **Physically interpretable and hyperparameter-free**  
-  EA directly measures the least costly collision-avoiding intervention in relative motion space.
-
-- **Validated at scale**  
-  The paper evaluates EA on **44,180 naturalistic interactions** from **five open datasets across three countries**, together with **658 reconstructed real-world crashes**.
-
-- **Earlier warnings under strict false-alarm budgets**  
-  EA provides the earliest sustained warnings across all evaluated thresholds, with lead times up to **267% longer than TTC-based methods**.
-
-- **Stronger crash-relevant information retention**  
-  EA retains substantially more information about eventual crash outcomes than existing baselines, with improvements up to **241.4%**.
-
-- **Strong nonredundant value beyond existing methods**  
-  Adding EA to TTC-based methods yields an additional **12.4%–38.4%** of the information ceiling, whereas adding existing methods to EA contributes almost no extra information, resulting in asymmetry ratios up to **95.5×**.
-
-- **Efficient enough for direct deployment**  
-  The implemented computational framework achieves an average single-frame runtime of about **5 ms**, enabling large-scale and real-time use.
-
----
-
-## Installation & Requirements
-
-This repository is written in Python. Running it in a virtual environment is recommended.
-
-### Core Libraries
-The codebase requires:
-- `numpy`
-- `pandas`
-- `matplotlib`
-- `Pillow`
-
-### Optional Acceleration
-Installing `numba` is strongly recommended for faster computation. The code will still run without it, but execution speed will be reduced.
-
-### Quick Install
+From a source checkout, with Python 3.10 or newer:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -e ".[batch,viz,fast]"
+ea single
+ea batch --input examples/data/without_yaw_rate.csv
 ```
 
-If you do not want optional JIT acceleration, install only the core runtime
-libraries:
-
-```bash
-pip install numpy pandas matplotlib pillow
-```
-
----
-
-## Quick Start
-
-Run the built-in single-frame example:
-
-```bash
-python src/single_frame.py
-```
-
-Run batch computation on the default example data in `demo_data/`:
-
-```bash
-python src/batch_compute.py
-```
-
-By default, generated CSV files are written to `outputs/batch_results/`.
-
-Run batch computation on your own CSV directory:
-
-```bash
-python src/batch_compute.py --input-dir path/to/your/csvs
-```
-
-Visualize the generated batch outputs:
-
-```bash
-python visualization/visualize_tracks_to_gif.py
-```
-
-By default, GIF files are written to `outputs/gifs/`.
-
----
-
-## Repository Structure
+The single-frame example prints approximately `EA = 4.828 m/s^2`. The batch
+command automatically estimates missing yaw rates. Open:
 
 ```text
-evasive-acceleration/
-├── demo_data/                    # Example CSV data for quick batch testing
-├── assets/gifs/                  # Pre-rendered qualitative examples for README
-├── src/
-│   ├── core_ea.py               # Core EA solver and motion-mode evaluations
-│   ├── baseline_risk_metrics.py # Baseline metrics for comparison
-│   ├── single_frame.py          # Entry script for instant single-frame evaluation
-│   └── batch_compute.py         # Entry script for trajectory-level batch processing
-├── visualization/               # Scripts for rendering cases and exporting GIFs
-├── tests/                       # Lightweight smoke tests
-└── requirements.txt             # Python dependencies
+outputs/batch_results/auto/without_yaw_rate_EA.csv
+outputs/batch_results/auto/without_yaw_rate_EA.run.json
 ```
 
----
+The CSV contains frame-wise EA, yaw-rate provenance, and error diagnostics.
+The JSON records the input, settings, and run summary. Existing result files
+are protected; rerun with `--overwrite` to replace them.
 
-## Input Definition
+For computation only, `python -m pip install -e .` installs the minimal package.
+The optional `batch`, `viz`, and `fast` extras add CSV processing, plotting, and
+Numba acceleration respectively. Numba's first call can include compilation
+time. `python -m evasive_acceleration` accepts the same commands as `ea`.
 
-EA is computed from the instantaneous states of **two interacting road users**. Each road user is represented by **7 parameters**.
+## Three ready-to-run inputs
 
-### Required 7 Parameters
-For road user `i ∈ {A, B}`, the input is:
+These small examples describe the same two approaching vehicles at 10 Hz.
+They vary only in yaw-rate availability. Run the commands from the checkout
+root after installation:
 
-`(x_i, y_i, v_i, h_i, L_i, W_i, ω_i)`
+| Input | Command | Yaw-rate handling |
+|---|---|---|
+| [Provided values](examples/data/provided.csv) | `ea batch --input examples/data/provided.csv --yaw-rate-source provided` | Use both input columns. |
+| [No yaw-rate columns](examples/data/without_yaw_rate.csv) | `ea batch --input examples/data/without_yaw_rate.csv` | Estimate both streams causally. |
+| [Partially missing values](examples/data/mixed_yaw_rate.csv) | `ea batch --input examples/data/mixed_yaw_rate.csv` | Use finite provided values; estimate individual missing values. |
 
-where:
-- `x_i`: global x position `[m]`
-- `y_i`: global y position `[m]`
-- `v_i`: speed magnitude `[m/s]`
-- `h_i`: heading angle `[rad]`
-- `L_i`: body length `[m]`
-- `W_i`: body width `[m]`
-- `ω_i`: yaw rate `[rad/s]`
+Default outputs are separated by policy under `outputs/batch_results/`:
+`provided/`, `estimated/`, or `auto/`, relative to your current working
+directory. To compare policies on the same input in fresh output folders:
 
-So one interaction frame consists of **14 values in total**.
+```bash
+ea batch --input examples/data/provided.csv --yaw-rate-source provided --output-dir outputs/comparison/provided
+ea batch --input examples/data/provided.csv --yaw-rate-source estimated --output-dir outputs/comparison/estimated
+```
 
-**Command-line order:** `x y speed heading length width yaw_rate`
+The first row estimated from heading alone uses a zero initialization
+placeholder. Its diagnostics distinguish that placeholder from an initialized
+zero-turn estimate. Consequently, the two policies need not have identical EA
+on that row, even with otherwise identical data.
 
-### Notes on Yaw Rate Input
-Some trajectory datasets do not provide yaw rate directly. In that case, it can be estimated from the historical heading sequence using finite differences, ideally with light smoothing to suppress numerical jitter.
+## Python usage
 
-- If a road user does not exhibit noticeable turning behaviour, you may set `yaw_rate = 0`.
-- If turning is evident, providing a more accurate yaw-rate estimate is strongly recommended.
+After installation, imports work from any working directory. The complete
+scripts [provided_state.py](examples/provided_state.py) and
+[from_history.py](examples/from_history.py) can also be copied into your project.
 
-### Applicability to Vulnerable Road Users (VRUs)
-EA can also be applied to cyclists and pedestrians. The input format stays the same; only the geometric dimensions (`length` and `width`) need to be adapted to the corresponding road user.
+### Yaw rate is available
 
-### Required Batch CSV Columns
+```python
+import math
+from evasive_acceleration import RoadUserState, compute_ea
 
-`src/batch_compute.py` expects one row per interaction frame and the following
-columns:
+agent_a = RoadUserState(
+    x=0.0, y=0.0, speed=10.0, heading=0.0,
+    length=4.5, width=1.8, yaw_rate=0.0,
+)
+agent_b = RoadUserState(
+    x=20.0, y=0.0, speed=8.0, heading=math.pi,
+    length=4.7, width=1.9, yaw_rate=0.0,
+)
+ea = compute_ea(agent_a, agent_b)
+print(f"EA = {ea:.3f} m/s^2")  # Approximately 4.828 m/s².
+```
+
+### Yaw rate is unavailable
+
+Use `RoadUserKinematicState` with six fields and attach the estimate from each
+object's own history:
+
+```python
+from evasive_acceleration import (
+    RoadUserKinematicState,
+    build_state_with_estimated_yaw_rate,
+    compute_ea,
+)
+
+current = RoadUserKinematicState(
+    x=0.0, y=0.0, speed=10.0, heading=0.02,
+    length=4.5, width=1.8,
+)
+state, estimate = build_state_with_estimated_yaw_rate(
+    current,
+    times_s=[0.0, 0.1, 0.2],
+    headings_rad=[0.0, 0.01, 0.02],
+)
+print(state.yaw_rate, estimate.initialized)  # 0.1, True
+```
+
+Repeat this for the other road user, then call `compute_ea(state_a, state_b)`.
+Both histories must end at the current decision time. The last history heading
+must match the corresponding current state. For continuous online use, keep
+one `CausalYawRateEWMA` instance per object; see the
+[yaw-rate method and API](docs/causal_yaw_rate.md).
+
+## Input conventions
+
+All inputs for an interaction must use the same Cartesian coordinate frame.
+Positions describe the centers of the oriented bounding boxes; heading is
+measured counterclockwise from the positive x axis. Positive yaw rate increases
+heading. Convert clockwise headings, image coordinates with downward-positive
+y, degrees, and rear-axle positions before calling the solver.
+
+| State field | Meaning | Unit |
+|---|---|---|
+| `x`, `y` | Bounding-box center position | m |
+| `speed` | Speed magnitude along heading | m/s |
+| `heading` | Body heading | rad |
+| `length`, `width` | Positive body dimensions | m |
+| `yaw_rate` | Signed heading rotation rate | rad/s |
+
+Use appropriate body dimensions for vehicles, cyclists, and pedestrians.
+The heading of a box and the direction of its displacement can differ,
+especially at low speed; the estimator uses the headings you supply.
+
+### Batch CSV schema
+
+Each file must describe **one continuous interaction pair in increasing time
+order**. Keep observations in their original causal order; do not interleave
+different pairs. If `Vehicle Number` or `2_Vehicle Number` changes, the
+corresponding estimator resets.
 
 | Agent A column | Agent B column | Unit |
 |---|---|---|
@@ -219,152 +149,165 @@ columns:
 | `Heading` | `2_Heading` | rad |
 | `Length (m)` | `2_Length (m)` | m |
 | `Width (m)` | `2_Width (m)` | m |
-| `Yawrate` | `2_Yawrate` | rad/s |
 
-Additional columns such as timestamps, IDs, accelerations, and labels are
-preserved in the output CSV.
+The default yaw-rate policy is `auto`:
 
----
+| Policy | Extra input | Behavior |
+|---|---|---|
+| `provided` | `Yawrate`, `2_Yawrate`, both finite | Use the input yaw rates. Timestamps are not needed for EA. |
+| `estimated` | `Time (s)` | Estimate both yaw-rate streams; ignore provided values. |
+| `auto` | Yaw-rate columns when available; `Time (s)` if any value needs estimation | Prefer each finite supplied value, otherwise estimate it. |
 
-## Usage
+In `auto`, timestamps are only required when estimation is actually needed.
+When timestamps are available, estimator histories are maintained on provided
+rows too, so a later missing yaw rate can use earlier headings. Additional
+input columns are preserved. Baseline metric errors are reported separately
+from EA.
 
-### 1. Single-Frame Computation
-Use `src/single_frame.py` for real-time EA evaluation, reinforcement learning, or instant inspection of a single interaction state.
+The causal estimator wraps heading differences to `[-π, π)`, divides by the
+actual elapsed time, and applies a rate EWMA. Defaults are `tau = 0.6 s`,
+output deadband `0.002 rad/s`, and four output decimals. The internal state
+keeps full precision. These preprocessing settings, initialization behavior,
+and limitations are documented in [docs/causal_yaw_rate.md](docs/causal_yaw_rate.md).
 
-**Run the built-in example:**
+## Command-line reference
+
+```bash
+ea single --help
+ea batch --help
+ea batch --input path/to/case.csv
+ea batch --input-dir path/to/csvs --yaw-rate-source estimated
+ea batch --input path/to/case.csv --output-dir path/to/results
+```
+
+`--input` and `--input-dir` are alternatives. A custom `--output-dir` receives
+files directly, without a policy subdirectory; use separate directories when
+comparing policies. Files ending in `_EA.csv` are skipped during directory
+discovery to avoid processing generated results again. The CLI reports file
+and row failures and returns a nonzero exit code if a run has errors. An
+input file cannot be replaced by an output, including with `--overwrite`.
+
+The original source entry points remain available:
+
 ```bash
 python src/single_frame.py
+python src/batch_compute.py --input examples/data/without_yaw_rate.csv
 ```
 
-**Run with your own input:**
+Running batch without an input uses the source checkout's `demo_data/` when
+present. `demo_data/`, `examples/`, and `visualization/` are checkout resources;
+code installed from a wheel should be given explicit external input paths.
+
+## Reading the results
+
+| Output | Meaning |
+|---|---|
+| `EA_CVCV`, `EA_CVCT`, `EA_CTCV`, `EA_CTCT` | EA for the four nominal motion combinations, in m/s² |
+| `EA` | Arithmetic mean of the four mode-specific values, in m/s² |
+| `EA_Yawrate_A_used_rad_s`, `EA_Yawrate_B_used_rad_s` | Actual yaw rates used by the solver |
+| `EA_Yawrate_A_source`, `EA_Yawrate_B_source` | Provided, estimated, initialization, or error provenance |
+| `EA_Yawrate_A_initialized`, `EA_Yawrate_B_initialized` | Estimated: a backward difference was available; provided: the supplied value was finite |
+| `EA_Yawrate_A_samples`, `EA_Yawrate_B_samples` | Valid causal observations in the estimator |
+| `EA_Yawrate_A_error`, `EA_Yawrate_B_error` | Specific yaw-rate input or estimation errors |
+| `EA_status`, `EA_error` | EA computation status and failure detail |
+| `EA_baseline_error` | Separate error detail for optional baseline calculations |
+
+`EA = 0` means no added relative acceleration is required under the evaluated
+motion assumptions and finite solver horizon. A yaw-rate value of `0` on the
+first estimated observation is an initialization placeholder, not an observed
+zero derivative. `NaN` indicates an unavailable result; inspect status and
+error columns. `inf` means the search did not find a solution within its
+configured limits; it does not establish physically unavoidable collision.
+
+Provided rows report a sample count of zero because no heading-history
+estimate was used for that row. Read initialization and sample count together
+with the source column.
+
+Batch output also includes baseline quantities such as `DRAC`, `TTC`, `TAdv`,
+`ACT`, `EI`, `MEI`, and `TTC2D`. Their definitions and normalization rules are
+in `src/baseline_risk_metrics.py`. For example, a non-conflicting TTC can be
+`inf`, which has a different meaning from an unbounded EA search result.
+
+## What EA computes
+
+The solver evaluates nominal constant-velocity (CV) and constant-turn-rate
+(CT) combinations for the two road users, then averages the four EA values.
+CT uses the supplied or estimated yaw rate; CV uses zero yaw rate.
+
+Numerical settings such as `T_total`, `dt_coarse`, `dt_fine`, `a_max`, and
+direction-grid sizes control the finite-horizon search and its approximation
+accuracy. Report these settings and the yaw-rate preprocessing configuration
+when reproducing an experiment. The physical EA definition and the numerical
+search remain the same for both yaw-rate input paths.
+
+The paper frames EA in two-dimensional relative motion space, considering the
+directions of collision-avoiding acceleration and retaining the least costly
+one. It reports evaluation on 44,180 naturalistic interactions from five open
+datasets across three countries and 658 reconstructed crashes. Its reported
+runtime of approximately 5 ms depends on the implementation and hardware;
+first-call JIT compilation should be excluded when measuring steady-state
+speed. See the paper for experiment protocols and comparisons.
+
+## Visual examples
+
+### Naturalistic interaction
+
+<p align="center">
+  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin interaction" width="90%">
+</p>
+
+A vehicle–motorcycle intersection interaction from the SinD dataset. The
+magnitude of the red arrow represents EA; a longer arrow denotes greater
+required evasive acceleration.
+
+### Reconstructed crash
+
+<p align="center">
+  <img src="assets/gifs/crash_684_T-bone.gif" alt="CIMSS-TA reconstructed T-bone crash" width="90%">
+</p>
+
+A reconstructed T-bone crash from CIMSS-TA, using the same red-arrow encoding.
+
+### Generate GIFs from a source checkout
+
+Install the `batch` and `viz` extras, compute batch results, then run:
+
 ```bash
-python src/single_frame.py \
-  --agent-a 0 0 10 0 4.5 1.8 0 \
-  --agent-b 20 0 8 3.1415926 4.7 1.9 0
+python visualization/visualize_tracks_to_gif.py --input-dir outputs/batch_results/auto --output-dir outputs/gifs
 ```
 
-Example interpretation:
-- Agent A is at `(0, 0)` moving at `10 m/s`.
-- Agent B is at `(20, 0)` moving at `8 m/s` in the opposite direction.
+Use `python visualization/visualize_tracks_to_gif.py --help` for frame and
+time-range options. The rendering script is separate from computation.
 
-The terminal output reports the EA value for the current interaction state.
-
-Expected output for the built-in example is approximately:
+## Repository layout
 
 ```text
-EA = 4.828
-Runtime = ...
+src/evasive_acceleration/        Installable API and command-line entry point
+src/core_ea.py                  Original EA solver
+src/single_frame.py             State helpers and compatible source entry point
+src/batch_compute.py            CSV pipeline and compatible source entry point
+src/yaw_rate.py                 Causal yaw-rate estimator
+src/baseline_risk_metrics.py    Comparison metrics
+examples/                      Small CSV inputs and complete Python examples
+demo_data/                     Original interaction demonstrations
+docs/                          Method documentation
+visualization/                 Source-checkout GIF renderer
+tests/                         Numerical, causality, API, and pipeline checks
+assets/gifs/                   README animations
+pyproject.toml                 Package metadata and optional dependencies
 ```
 
-### 2. Batch Computation
-Use `src/batch_compute.py` to process trajectory cases frame by frame. This is suitable for dataset analysis and comparison between EA and baseline metrics.
-
-**Run on the default example data:**
-```bash
-python src/batch_compute.py
-```
-
-**Run on your own CSV directory:**
-```bash
-python src/batch_compute.py --input-dir path/to/your/csvs
-```
-
-If no input directory is provided, the script uses `demo_data/` by default.
-
-Generated CSV files are written to `outputs/batch_results/` by default, so the
-input data remain unchanged. To choose another output directory:
+## Development checks
 
 ```bash
-python src/batch_compute.py --input-dir path/to/your/csvs --output-dir path/to/results
+python -m pip install -e ".[batch,viz,fast,dev]"
+python -m pytest
 ```
 
-The batch script skips files ending in `_EA.csv` to avoid reprocessing its own
-outputs.
-
-### 3. Visualization
-Use `visualization/visualize_tracks_to_gif.py` to render interaction geometry
-and export GIFs after running batch computation.
-
-Typical workflow:
-1. Prepare the input CSV case.
-2. Run `python src/batch_compute.py`.
-3. Run `python visualization/visualize_tracks_to_gif.py`.
-4. Inspect generated GIFs under `outputs/gifs/`.
-
-Useful options:
-
-```bash
-python visualization/visualize_tracks_to_gif.py \
-  --input-dir outputs/batch_results \
-  --output-dir outputs/gifs \
-  --frame-step 2 \
-  --time-range 0.0 1.0 \
-  --ea-max 1.5
-```
-
-Visualization is intentionally kept separate from the core solver, so users interested only in computation do not need the plotting workflow.
-
----
-
-## What the Code Computes
-
-### EA
-The final EA value is computed as the arithmetic mean of four motion-mode-specific values:
-
-- `EA_CTCT`
-- `EA_CTCV`
-- `EA_CVCT`
-- `EA_CVCV`
-
-These correspond to different short-horizon nominal motion assumptions for the two interacting road users. The final reported EA is their average, which improves robustness across heterogeneous interaction patterns.
-
-The implementation exposes numerical search settings such as `T_total`,
-`dt_coarse`, `dt_fine`, `a_max`, and direction-grid sizes. These control the
-finite-horizon numerical solver and approximation accuracy; they are not
-dataset-specific tuning parameters for the EA definition itself.
-
-### Baseline Metrics
-For comparison, the repository also includes several baseline risk metrics implemented in `baseline_risk_metrics.py`, including:
-
-- `TTC`
-- `TTC2D`
-- `ACT`
-- `DRAC`
-- `MEI`
-
-Batch outputs append the following columns:
-
-| Column | Meaning |
-|---|---|
-| `EA_CVCV`, `EA_CVCT`, `EA_CTCV`, `EA_CTCT` | Mode-specific EA values |
-| `EA` | Arithmetic mean of the four mode-specific EA values |
-| `DRAC`, `TTC`, `TAdv`, `ACT`, `EI`, `MEI`, `TTC2D` | Baseline surrogate safety metrics |
-| `v_closest`, `Shortest_D`, `InDepth`, `DTC`, `v_norm` | Intermediate baseline quantities |
-| `BBox distance (m)`, `Centroid distance (m)` | Geometric distances |
-
-For baseline metrics, invalid or non-conflicting cases follow the normalization
-rules implemented in `baseline_risk_metrics.py`: some risk magnitudes are
-reported as `0`, while time-to-event quantities may be reported as `inf`.
-
----
-
-## Development Checks
-
-Run the smoke tests with:
-
-```bash
-pip install pytest
-pytest
-```
-
-The tests verify that the single-frame demo returns a finite EA and that the
-batch pipeline writes the expected output columns for demo data.
-
----
+Tests check the original solver result, yaw-rate numerics and causality,
+installed imports, and batch input/output behavior.
 
 ## Citation
-
-If you find this repository useful, please cite the paper:
 
 ```bibtex
 @article{cheng2026driving,
@@ -375,14 +318,9 @@ If you find this repository useful, please cite the paper:
 }
 ```
 
-Plain-text citation:
-
-> Cheng H, Jiang Y, Yu W, et al. Driving risk emerges from the required two-dimensional joint evasive acceleration[J]. arXiv preprint arXiv:2604.17841, 2026.
-
-Paper link: https://arxiv.org/abs/2604.17841
-
----
+Cheng H, Jiang Y, Yu W, et al. *Driving risk emerges from the required
+two-dimensional joint evasive acceleration.* arXiv:2604.17841, 2026.
 
 ## License
 
-This project is released under the license provided in `LICENSE`.
+See [LICENSE](LICENSE) for the project license.
