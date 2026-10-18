@@ -7,6 +7,43 @@ yaw rates from current and historical headings with the same EA solver.
 
 Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
+[Install and run](#install-and-run) · [Python usage](#python-usage) · [Input conventions](#input-conventions)
+
+## Visual overview
+
+### Paper Fig. 1: the EA framework
+
+<p align="center">
+  <a href="assets/figures/ea_framework_fig1.pdf">
+    <img src="assets/figures/ea_framework_fig1.png" alt="Figure 1: motivation for EA, the two-dimensional relative-acceleration formulation, and validation using crashes and naturalistic interactions" width="100%">
+  </a>
+</p>
+
+Figure 1 from the paper brings together the limitations of time-based risk
+measures, the minimum two-dimensional relative acceleration required for
+collision avoidance, and the experimental validation.
+[Open the vector PDF](assets/figures/ea_framework_fig1.pdf) for a closer look.
+
+## Visual examples
+
+### Naturalistic interaction
+
+<p align="center">
+  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin interaction" width="90%">
+</p>
+
+A vehicle–motorcycle intersection interaction from the SinD dataset. The
+magnitude of the red arrow represents EA; a longer arrow denotes greater
+required evasive acceleration.
+
+### Reconstructed crash
+
+<p align="center">
+  <img src="assets/gifs/crash_684_T-bone.gif" alt="CIMSS-TA reconstructed T-bone crash" width="90%">
+</p>
+
+A reconstructed T-bone crash from CIMSS-TA, using the same red-arrow encoding.
+
 ## Install and run
 
 From a source checkout, with Python 3.10 or newer:
@@ -248,27 +285,7 @@ runtime of approximately 5 ms depends on the implementation and hardware;
 first-call JIT compilation should be excluded when measuring steady-state
 speed. See the paper for experiment protocols and comparisons.
 
-## Visual examples
-
-### Naturalistic interaction
-
-<p align="center">
-  <img src="assets/gifs/SIND_Tianjin_8_9_1_486_496.gif" alt="SinD Tianjin interaction" width="90%">
-</p>
-
-A vehicle–motorcycle intersection interaction from the SinD dataset. The
-magnitude of the red arrow represents EA; a longer arrow denotes greater
-required evasive acceleration.
-
-### Reconstructed crash
-
-<p align="center">
-  <img src="assets/gifs/crash_684_T-bone.gif" alt="CIMSS-TA reconstructed T-bone crash" width="90%">
-</p>
-
-A reconstructed T-bone crash from CIMSS-TA, using the same red-arrow encoding.
-
-### Generate GIFs from a source checkout
+## Generate GIFs from a source checkout
 
 Install the `batch` and `viz` extras, compute batch results, then run:
 
@@ -294,6 +311,7 @@ docs/                          Method documentation
 visualization/                 Source-checkout GIF renderer
 tests/                         Numerical, causality, API, and pipeline checks
 assets/gifs/                   README animations
+assets/figures/                Paper Fig. 1 preview and vector original
 pyproject.toml                 Package metadata and optional dependencies
 ```
 
