@@ -42,11 +42,22 @@ from core_ea import (
     compute_ea,
     compute_ea_timed,
 )
+from yaw_rate import (
+    DEFAULT_DEADBAND_RAD_S,
+    DEFAULT_DECIMALS,
+    DEFAULT_TAU_S,
+    CausalYawRateEWMA,
+    YawRateEstimate,
+    wrap_angle_difference,
+)
 
 __all__ = [
     "RoadUserState",
+    "RoadUserKinematicState",
+    "build_state_with_estimated_yaw_rate",
     "build_compute_kwargs",
     "compute_single_frame_ea",
+    "compute_single_frame_ea_from_heading_histories",
     "compute_single_frame_ea_timed",
 ]
 
@@ -169,6 +180,86 @@ class RoadUserState:
         )
         state.validate()
         return state
+
+
+@dataclass(frozen=True)
+class RoadUserKinematicState:
+    """Instantaneous road-user state when yaw rate is unavailable."""
+
+    x: float
+    y: float
+    speed: float
+    heading: float
+    length: float
+    width: float
+
+    def validate(self) -> None:
+        values = (
+            self.x,
+            self.y,
+            self.speed,
+            self.heading,
+            self.length,
+            self.width,
+        )
+        if not all(math.isfinite(float(value)) for value in values):
+            raise ValueError("All kinematic state values must be finite real numbers.")
+        if self.length <= 0.0 or self.width <= 0.0:
+            raise ValueError("length and width must be strictly positive.")
+
+
+def build_state_with_estimated_yaw_rate(
+    state: RoadUserKinematicState,
+    times_s: Sequence[float],
+    headings_rad: Sequence[float],
+    *,
+    tau_s: float = DEFAULT_TAU_S,
+    deadband_rad_s: float = DEFAULT_DEADBAND_RAD_S,
+    decimals: int = DEFAULT_DECIMALS,
+    heading_tolerance_rad: float = 1e-6,
+) -> Tuple[RoadUserState, YawRateEstimate]:
+    """Attach a strictly causal yaw-rate estimate to an instantaneous state.
+
+    ``times_s`` and ``headings_rad`` must end at the state being evaluated; no
+    future observation is permitted.  The final history heading is checked
+    against ``state.heading`` so an accidentally misaligned history fails
+    loudly instead of silently producing the wrong CTRV input.
+    """
+    state.validate()
+    if len(times_s) != len(headings_rad) or len(times_s) == 0:
+        raise ValueError("times_s and headings_rad must be equal-length non-empty sequences")
+    if heading_tolerance_rad < 0.0 or not math.isfinite(heading_tolerance_rad):
+        raise ValueError("heading_tolerance_rad must be finite and non-negative")
+
+    estimator = CausalYawRateEWMA(tau_s, deadband_rad_s, decimals)
+    value = 0.0
+    for time_s, heading_rad in zip(times_s, headings_rad):
+        value = estimator.update(time_s, heading_rad)
+
+    final_heading = float(headings_rad[-1])
+    mismatch = abs(wrap_angle_difference(final_heading - float(state.heading)))
+    if mismatch > heading_tolerance_rad:
+        raise ValueError(
+            "the final heading-history observation does not match state.heading "
+            f"(wrapped difference {mismatch:.6g} rad)"
+        )
+
+    estimate = estimator.last_estimate
+    if estimate is None:  # Defensive; a non-empty history always creates one.
+        raise RuntimeError("yaw-rate estimator did not produce an estimate")
+
+    return (
+        RoadUserState(
+            x=float(state.x),
+            y=float(state.y),
+            speed=float(state.speed),
+            heading=float(state.heading),
+            length=float(state.length),
+            width=float(state.width),
+            yaw_rate=float(value),
+        ),
+        estimate,
+    )
 
 
 # ============================================================================
@@ -302,6 +393,39 @@ def compute_single_frame_ea(
     return float(compute_ea(**kwargs))
 
 
+def compute_single_frame_ea_from_heading_histories(
+    agent_a: RoadUserKinematicState,
+    times_a_s: Sequence[float],
+    headings_a_rad: Sequence[float],
+    agent_b: RoadUserKinematicState,
+    times_b_s: Sequence[float],
+    headings_b_rad: Sequence[float],
+    *,
+    yaw_rate_tau_s: float = DEFAULT_TAU_S,
+    yaw_rate_deadband_rad_s: float = DEFAULT_DEADBAND_RAD_S,
+    yaw_rate_decimals: int = DEFAULT_DECIMALS,
+    **solver_kwargs,
+) -> float:
+    """Compute EA when yaw rates must be estimated from causal histories."""
+    state_a, _ = build_state_with_estimated_yaw_rate(
+        agent_a,
+        times_a_s,
+        headings_a_rad,
+        tau_s=yaw_rate_tau_s,
+        deadband_rad_s=yaw_rate_deadband_rad_s,
+        decimals=yaw_rate_decimals,
+    )
+    state_b, _ = build_state_with_estimated_yaw_rate(
+        agent_b,
+        times_b_s,
+        headings_b_rad,
+        tau_s=yaw_rate_tau_s,
+        deadband_rad_s=yaw_rate_deadband_rad_s,
+        decimals=yaw_rate_decimals,
+    )
+    return compute_single_frame_ea(state_a, state_b, **solver_kwargs)
+
+
 def compute_single_frame_ea_timed(
     agent_a: RoadUserState,
     agent_b: RoadUserState,
@@ -417,58 +541,63 @@ def _get_example_case() -> Tuple[RoadUserState, RoadUserState]:
 
 def _print_result(ea_value: float, elapsed: float) -> None:
     """Print the computation result in a compact human-readable format."""
-    print("EA =", _format_float_3(ea_value))
-    print("Runtime =", _format_seconds(elapsed))
+    print("EA =", _format_float_3(ea_value), "m/s^2")
+    print("Runtime after warm-up =", _format_seconds(elapsed))
 
 
 # ============================================================================
 # Main entry
 # ============================================================================
-def main() -> None:
+def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point."""
     parser = _build_argument_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    if args.example or (args.agent_a is None and args.agent_b is None):
-        agent_a, agent_b = _get_example_case()
-    else:
-        if args.agent_a is None or args.agent_b is None:
-            parser.error("Both --agent-a and --agent-b must be provided together.")
-        agent_a = RoadUserState.from_sequence(args.agent_a)
-        agent_b = RoadUserState.from_sequence(args.agent_b)
+    try:
+        if args.example or (args.agent_a is None and args.agent_b is None):
+            agent_a, agent_b = _get_example_case()
+        else:
+            if args.agent_a is None or args.agent_b is None:
+                parser.error("Both --agent-a and --agent-b must be provided together.")
+            agent_a = RoadUserState.from_sequence(args.agent_a)
+            agent_b = RoadUserState.from_sequence(args.agent_b)
 
-    _ = compute_single_frame_ea(
-        agent_a,
-        agent_b,
-        coarse_sector_num=args.coarse_sector_num,
-        local_fine_half_window_deg=args.local_fine_half_window_deg,
-        local_fine_dir_num=args.local_fine_dir_num,
-        fine_refine_ratio=args.fine_refine_ratio,
-        a_max=args.a_max,
-        tol=args.tol,
-        T_total=args.T_total,
-        dt_coarse=args.dt_coarse,
-        dt_fine=args.dt_fine,
-        size_scale=args.size_scale,
-    )
+        print("Warming up the solver (the first call may include Numba compilation)...")
+        _ = compute_single_frame_ea(
+            agent_a,
+            agent_b,
+            coarse_sector_num=args.coarse_sector_num,
+            local_fine_half_window_deg=args.local_fine_half_window_deg,
+            local_fine_dir_num=args.local_fine_dir_num,
+            fine_refine_ratio=args.fine_refine_ratio,
+            a_max=args.a_max,
+            tol=args.tol,
+            T_total=args.T_total,
+            dt_coarse=args.dt_coarse,
+            dt_fine=args.dt_fine,
+            size_scale=args.size_scale,
+        )
 
-    ea_value, elapsed = compute_single_frame_ea_timed(
-        agent_a,
-        agent_b,
-        coarse_sector_num=args.coarse_sector_num,
-        local_fine_half_window_deg=args.local_fine_half_window_deg,
-        local_fine_dir_num=args.local_fine_dir_num,
-        fine_refine_ratio=args.fine_refine_ratio,
-        a_max=args.a_max,
-        tol=args.tol,
-        T_total=args.T_total,
-        dt_coarse=args.dt_coarse,
-        dt_fine=args.dt_fine,
-        size_scale=args.size_scale,
-    )
+        ea_value, elapsed = compute_single_frame_ea_timed(
+            agent_a,
+            agent_b,
+            coarse_sector_num=args.coarse_sector_num,
+            local_fine_half_window_deg=args.local_fine_half_window_deg,
+            local_fine_dir_num=args.local_fine_dir_num,
+            fine_refine_ratio=args.fine_refine_ratio,
+            a_max=args.a_max,
+            tol=args.tol,
+            T_total=args.T_total,
+            dt_coarse=args.dt_coarse,
+            dt_fine=args.dt_fine,
+            size_scale=args.size_scale,
+        )
 
-    _print_result(ea_value, elapsed)
+        _print_result(ea_value, elapsed)
+    except (TypeError, ValueError) as exc:
+        parser.error(str(exc))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
