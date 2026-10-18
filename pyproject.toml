@@ -17,12 +17,13 @@ batch = ["pandas>=1.5"]
 viz = ["pandas>=1.5", "matplotlib>=3.6", "Pillow>=9"]
 fast = ["numba>=0.57"]
 dev = ["pytest>=7", "build>=1"]
+notebook = ["pandas>=1.5", "matplotlib>=3.6", "Pillow>=9", "nbformat>=5.7", "nbclient>=0.8", "ipykernel>=6", "ipywidgets>=7.6", "notebook>=6.5"]
 
 [project.scripts]
 ea = "evasive_acceleration.cli:main"
 
 [project.urls]
-Repository = "https://github.com/AutoChengh/evasive-acceleration"
+Repository = "https://github.com/AutoChengh/evasive-acceleration-v2"
 
 [tool.setuptools]
 # Explicit mapping selects an import hook for editable installs. Its .pth

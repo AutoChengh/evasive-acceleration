@@ -1,5 +1,11 @@
 # Evasive Acceleration (EA)
 
+This is an independent **v2 evaluation repository**, not a replacement for
+the [original EA repository](https://github.com/AutoChengh/evasive-acceleration).
+The original repository is not updated by this upload. The EA solver and
+historical baseline source remain unchanged; the additions focus on usability,
+recomputable examples, plotting, notebooks, and automated tests.
+
 Compute two-dimensional interaction risk from the current states of two road
 users. EA measures the minimum constant relative acceleration needed to avoid
 predicted collision, in **m/s²**. Supply yaw rates directly, or estimate missing
@@ -7,7 +13,7 @@ yaw rates from current and historical headings with the same EA solver.
 
 Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
-[Install and run](#install-and-run) · [Python usage](#python-usage) · [Input conventions](#input-conventions)
+[Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Interactive notebook](#interactive-notebook) · [Python usage](#python-usage) · [Input conventions](#input-conventions)
 
 ## Visual overview
 
@@ -44,11 +50,52 @@ required evasive acceleration.
 
 A reconstructed T-bone crash from CIMSS-TA, using the same red-arrow encoding.
 
+## Recomputable examples
+
+Start with the question you want to answer:
+
+| Goal | Entry point | What you get |
+|---|---|---|
+| Understand what EA adds to TTC | [Equal-TTC comparison](docs/comparison_case.md) | Two synthetic states, full inputs, actual EA/TTC/DRAC results, a figure, and settings. |
+| Use a tracking table with your own column names | [Bring your own data](docs/bring_your_own_data.md) | A copyable DataFrame adapter with explicit units, coordinate conversion, and causal yaw-rate handling. |
+| Explore interactively | [EA quickstart notebook](notebooks/ea_quickstart.ipynb) | Recompute the comparison, convert custom data, inspect risk/yaw-rate histories, and adjust two manual controls. |
+
+After installing the visualization extras, reproduce the comparison with:
+
+```bash
+python examples/comparison_case.py --output-dir outputs/comparison_case
+```
+
+Both cases have TTC = 2.00 s, while the unchanged solver gives EA of about
+0.500 and 0.874 m/s². These are explicitly synthetic illustrations, not paper
+experiment data or evidence for a universal safety threshold. EA permits
+two-dimensional relative avoidance, not only lane-constrained braking.
+
+New figures use [Fig. 1's palette and regular Arial](docs/figure_style.md), with
+no bold labels. Arial must be available for final exports; an explicitly
+enabled, warned font fallback is only for previews or hosted CI.
+
+## Interactive notebook
+
+From a source checkout:
+
+```bash
+python -m pip install -e ".[notebook,fast]"
+python -m notebook notebooks/ea_quickstart.ipynb
+```
+
+Run the cells in order. Each execution writes a fresh run directory, without
+replacing inputs or earlier runs. The notebook uses the same API and example
+scripts, not a second implementation of EA. See the [notebook guide](notebooks/README.md)
+for font setup, hosted notebook use after publication, and headless execution.
+
 ## Install and run
 
 From a source checkout, with Python 3.10 or newer:
 
 ```bash
+git clone https://github.com/AutoChengh/evasive-acceleration-v2.git
+cd evasive-acceleration-v2
 python -m pip install -e ".[batch,viz,fast]"
 ea single
 ea batch --input examples/data/without_yaw_rate.csv
@@ -70,6 +117,13 @@ For computation only, `python -m pip install -e .` installs the minimal package.
 The optional `batch`, `viz`, and `fast` extras add CSV processing, plotting, and
 Numba acceleration respectively. Numba's first call can include compilation
 time. `python -m evasive_acceleration` accepts the same commands as `ea`.
+The `notebook` extra includes the interactive notebook and execution dependencies;
+it is not required for ordinary EA computation.
+
+This evaluation repository is initially private: Git cloning requires an
+authorized GitHub account. Use a separate virtual environment when comparing
+with the original version, because the Python distribution/import names remain
+`evasive-acceleration` / `evasive_acceleration`. This upload is not a PyPI release.
 
 ## Three ready-to-run inputs
 
@@ -264,6 +318,9 @@ Batch output also includes baseline quantities such as `DRAC`, `TTC`, `TAdv`,
 `ACT`, `EI`, `MEI`, and `TTC2D`. Their definitions and normalization rules are
 in `src/baseline_risk_metrics.py`. For example, a non-conflicting TTC can be
 `inf`, which has a different meaning from an unbounded EA search result.
+The unchanged historical baseline also maps some undefined/current-overlap
+states to `0` or `inf`; do not interpret these values alone as a safe label.
+The new comparison avoids initially overlapping boxes.
 
 ## What EA computes
 
@@ -306,8 +363,11 @@ src/batch_compute.py            CSV pipeline and compatible source entry point
 src/yaw_rate.py                 Causal yaw-rate estimator
 src/baseline_risk_metrics.py    Comparison metrics
 examples/                      Small CSV inputs and complete Python examples
+notebooks/                     Interactive, output-free quickstart and run guide
 demo_data/                     Original interaction demonstrations
 docs/                          Method documentation
+tools/                         Source-integrity and headless notebook checks
+.github/workflows/             Cross-platform tests, wheel and notebook checks
 visualization/                 Source-checkout GIF renderer
 tests/                         Numerical, causality, API, and pipeline checks
 assets/gifs/                   README animations
@@ -324,6 +384,19 @@ python -m pytest
 
 Tests check the original solver result, yaw-rate numerics and causality,
 installed imports, and batch input/output behavior.
+They also check frozen original four-mode EA values, the comparison inputs and
+results, custom-data conversion, output protection, and figure typography.
+The EA solver and baseline source are protected by normalized source hashes.
+
+```bash
+python tools/check_core_integrity.py
+python tools/execute_quickstart.py --output outputs/notebooks/ea_quickstart.executed.ipynb
+```
+
+The [automated workflow](.github/workflows/tests.yml) defines Linux/Windows,
+Python 3.10/3.12, accelerated/unaccelerated, isolated-wheel and notebook checks.
+Local testing does not mean those hosted jobs have already run; see
+[validation details](docs/validation.md).
 
 ## Citation
 

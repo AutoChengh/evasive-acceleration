@@ -1,0 +1,3 @@
+case_id,provenance,description,a_x_m,a_y_m,a_speed_m_s,a_heading_rad,a_length_m,a_width_m,a_yaw_rate_rad_s,b_x_m,b_y_m,b_speed_m_s,b_heading_rad,b_length_m,b_width_m,b_yaw_rate_rad_s
+case_1,synthetic,Lower closing speed,0,0,12,0,4.5,1.8,0,8.5,0,10,0,4.5,1.8,0
+case_2,synthetic,Higher closing speed,0,0,20,0,4.5,1.8,0,24.5,0,10,0,4.5,1.8,0

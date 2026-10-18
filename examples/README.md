@@ -1,5 +1,18 @@
 # Runnable examples
 
+The original small examples below still work unchanged. New entry points:
+
+- [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC
+  states with different EA, and export full inputs, results, settings, and a
+  Fig. 1-styled PNG. See [the comparison explanation](../docs/comparison_case.md).
+- [from_dataframe.py](from_dataframe.py): map a custom long-form tracking table
+  into the existing pairwise batch pipeline. See
+  [the data-adaptation guide](../docs/bring_your_own_data.md).
+- [Interactive notebook](../notebooks/ea_quickstart.ipynb): run both workflows,
+  inspect causal yaw-rate provenance, and change an interaction manually.
+
+New figures require regular Arial; see [font and color setup](../docs/figure_style.md).
+
 Install from the repository root:
 
 ```bash
