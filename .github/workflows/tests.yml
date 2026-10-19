@@ -56,7 +56,7 @@ jobs:
           python examples/provided_state.py
           python examples/from_history.py
           ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
-          python examples/comparison_case.py --output-dir outputs/ci_comparison
+          python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
       - name: Build source and wheel distributions
         run: python -m build
       - name: Smoke-test wheel in an isolated environment

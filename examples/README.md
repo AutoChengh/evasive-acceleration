@@ -13,6 +13,11 @@ interfaces. Start with:
   inspect causal yaw-rate provenance, and change an interaction manually.
 
 New figures require regular Arial; see [font and color setup](../docs/figure_style.md).
+For a labelled preview on a host without Arial, explicitly use
+`python examples/comparison_case.py --allow-font-fallback` or set
+`EA_ALLOW_FONT_FALLBACK=1`. The actual font and substitution are recorded in the
+run JSON. Without either opt-in, Arial remains required; publication exports
+must not use preview fallback.
 
 Install from the repository root:
 

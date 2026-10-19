@@ -1,10 +1,12 @@
-"""Check paper-core equivalence and time the four-mode API against old v2.
+"""Check the current runtime against paper references and time it against old v2.
 
 This is an implementation-migration check, not a new paper experiment. The old
 core is read from Git history into ignored outputs; it is never shipped in the
 package. Both timed functions compute only the same four EA components, with
 identical settings and provided yaw rates. Warm-up, reference calculation, CSV
 I/O, and report writing are excluded from per-frame timings.
+The timed runtime is always the current checkout. This command does not restore
+the historical 0.3.0.dev0 runtime or reproduce its archived performance table.
 
 Examples (from the repository root)::
 
@@ -15,6 +17,7 @@ Examples (from the repository root)::
 Use --skip-legacy if the source checkout has no Git history. Optional
 --paper-source must contain the independently frozen calculator.py, config.py,
 motion.py, and numerical_solver.py; all four hashes are checked before import.
+It selects only the reference calculation, never the runtime being timed.
 """
 
 from __future__ import annotations
@@ -212,7 +215,10 @@ def _run(argv=None, *, jit_cache_path=None):
     parser.add_argument("--frames", type=int, default=96)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--input", action="append", type=Path)
-    parser.add_argument("--paper-source", type=Path)
+    parser.add_argument(
+        "--paper-source", type=Path,
+        help="Frozen reference sources only; the timed runtime is still this checkout",
+    )
     parser.add_argument("--legacy-ref", default="e47598e906453377e1a8f1bd5d35d76ac26375ee")
     parser.add_argument("--skip-legacy", action="store_true")
     parser.add_argument("--output-dir", type=Path)
@@ -267,7 +273,9 @@ def _run(argv=None, *, jit_cache_path=None):
     engines = {"paper_four_modes": core_ea}
     if legacy is not None:
         engines["legacy_four_modes"] = legacy
-    print("Warming both implementations on every selected frame (not timed)...", flush=True)
+    runtime_provenance = core_ea.get_core_provenance()
+    print(f"Timed runtime: current checkout ({runtime_provenance['core_id']})", flush=True)
+    print("Warming selected implementations on every selected frame (not timed)...", flush=True)
     warmup = {}
     for name, engine in engines.items():
         start = time.perf_counter()
@@ -312,6 +320,8 @@ def _run(argv=None, *, jit_cache_path=None):
         "isolated_temporary_numba_cache": jit_cache_path,
         "core_file": str(Path(core_ea.__file__).resolve()), "core_sha256": sha256(core_ea.__file__),
         "core_id": getattr(core_ea, "CORE_ID", None),
+        "timed_runtime_origin": "current_checkout",
+        "runtime_provenance": runtime_provenance,
         "adapter_source_sha256": {
             relative: sha256(ROOT / relative)
             for relative in ("src/core_ea.py", "src/evasive_acceleration/_paper/four_modes.py",

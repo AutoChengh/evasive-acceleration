@@ -63,6 +63,10 @@ For a non-publication preview only, explicitly set
 notebook configuration. The replacement is printed and recorded. Such an
 output is not claimed to meet the Arial publication requirement. This explicit
 mode allows hosted Linux CI to test the execution logic without bundling fonts.
+The equal-TTC comparison follows the same explicit preview setting, adds a
+non-Arial preview label to substituted figures, and records the actual font in
+its run manifest. For a strict export despite an enabled preview environment,
+pass `allow_font_fallback=False` to `run_comparison` or `plot_comparison`.
 
 ## Reading notebook outputs
 

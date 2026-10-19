@@ -129,7 +129,7 @@ used in ordinary single-frame computation. It records them in the run JSON:
 | Coarse directions | 72 |
 | Local fine directions | 101 |
 | Local fine half-window | 5 degrees |
-| Fine refinement ratio | 1.15 |
+| Fine refinement ratio | 1.15 (retained compatibility parameter; unused by the verified runtime) |
 | Geometry size scale | 1.0 |
 
 ## Notebook use
@@ -155,8 +155,12 @@ display(figure)
 Close it with `matplotlib.pyplot.close(figure)` when finished. Matplotlib is
 imported only for plotting; `run_comparison(..., make_plot=False)` needs the
 batch/Pandas dependency but not the visualization dependency. The plot uses
-the shared Fig. 1 palette and strict `figure_style()` (Arial regular, no
-bold), and exports PNG only. `run_comparison` also accepts `overwrite=True`
+the shared Fig. 1 palette and regular Arial by default (no bold), and exports
+PNG only. `run_comparison` also accepts `overwrite=True`
 for intentional replacement; its default is `False`. The run JSON records
-`font_provenance`, or `null` when plotting is disabled. This publication-style
-example requires Arial even if preview font fallback is enabled elsewhere.
+`font_provenance`, or `null` when plotting is disabled. On hosts without Arial,
+explicitly opt in to a labelled preview using `--allow-font-fallback`,
+`EA_ALLOW_FONT_FALLBACK=1`, or the API's `allow_font_fallback=True`. The preview
+records the actual font and is not a publication figure. Pass
+`allow_font_fallback=False` to enforce Arial even when that environment option
+is enabled.

@@ -99,6 +99,28 @@ Faster execution on a measured sample does not establish a universal speedup.
 Numerical consistency and performance checks accompany this migration;
 full dataset-level and independent solver validation are separate work.
 
+## Review-branch fixes on 2026-10-20
+
+After the four review fixes, the default `python -m pytest -q` command passed
+**193 tests in each environment**: the Numba and NumPy-only Windows/Python
+3.11.7 environments listed below. The earlier 165-test result is retained as
+the pre-review runtime check, not the current suite size.
+
+New regression checks cover explicit, labelled font previews when Arial is
+unavailable; valid short horizons with final-endpoint collision checks;
+default test discovery excluding retained output snapshots; and migration
+reports identifying the current checkout rather than the historical runtime.
+Publication rendering still requires regular Arial; non-Arial output requires
+an explicit preview opt-in and is not for publication. The frozen paper sources and causal yaw-rate
+estimator pass their unchanged integrity checks.
+
+The quickstart executed all 8 code cells with 4 inline PNGs and no cell errors.
+Both public state examples and the batch CLI passed. The comparison example
+also rendered successfully with simulated missing Arial, with the substitute
+font labelled in the figure and recorded in its JSON. Source and wheel builds
+passed. Local review artifacts are retained under
+`outputs/validation/review_fixes_20261020/` and are not committed.
+
 ## Verified runtime checks for 0.3.0.dev1
 
 The full suite passed **165 tests** in each of the two separate environments
@@ -211,7 +233,9 @@ recorded rather than hidden by retaining the old scores. Migration consistency
 is assessed against the canonical paper calculation, not against the earlier
 mixed implementation.
 
-Reproduce the comparison from this Git checkout:
+The table above is an archived `0.3.0.dev0` measurement, not a benchmark of
+the current runtime. Running the following command from this checkout compares
+the **currently checked-out runtime** with the earlier mixed core (`e47598e`):
 
 ```bash
 python tools/validate_paper_migration.py --frames 403 --repeats 3 --output-dir outputs/validation/paper_migration
@@ -219,7 +243,11 @@ python tools/validate_paper_migration.py --frames 403 --repeats 3 --output-dir o
 
 The report records source/input hashes, settings, versions, per-frame
 comparisons, and timings. `--paper-source /path/to/frozen/paper/src` selects a
-separate, hash-verified paper source directory instead of the vendored copy.
+separate, hash-verified **reference calculator**, not the runtime being timed.
+Reproducing the historical table requires the preserved `0.3.0.dev0` source
+snapshot and its recorded environment; this command does not reconstruct that
+runtime or guarantee its historical timings. The current runtime identity and
+source hashes are recorded in each new report.
 `--skip-legacy` runs paper-consistency checks without requiring the historical
 Git revision, for example in a source archive or shallow checkout.
 

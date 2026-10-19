@@ -148,7 +148,7 @@ def test_font_failure_preserves_existing_artifacts(tmp_path, monkeypatch):
 
     monkeypatch.setattr(plotting, "resolve_figure_font", unavailable_font)
     with pytest.raises(RuntimeError, match="Arial unavailable"):
-        comparison.run_comparison(tmp_path, overwrite=True)
+        comparison.run_comparison(tmp_path, overwrite=True, allow_font_fallback=False)
     assert {filename: (tmp_path / filename).read_bytes() for filename in filenames} == before
 
 
@@ -177,3 +177,81 @@ def test_exclusive_write_failure_removes_only_owned_reservations(tmp_path):
         )
     assert not (tmp_path / "first.csv").exists()
     assert existing.read_bytes() == b"created concurrently"
+
+
+@pytest.fixture
+def no_arial(monkeypatch):
+    """Simulate a hosted Linux font inventory while retaining Matplotlib's fonts."""
+    pytest.importorskip("matplotlib")
+    from matplotlib import font_manager
+
+    monkeypatch.delenv("EA_ARIAL_FONT_PATH", raising=False)
+    monkeypatch.delenv("EA_ALLOW_FONT_FALLBACK", raising=False)
+    original = font_manager.findfont
+
+    def without_arial(properties, *args, **kwargs):
+        families = properties.get_family() if hasattr(properties, "get_family") else []
+        if any(str(family).casefold() == "arial" for family in families):
+            raise ValueError("Arial unavailable in simulated Linux font inventory")
+        return original(properties, *args, **kwargs)
+
+    monkeypatch.setattr(font_manager, "findfont", without_arial)
+
+
+def test_no_arial_default_plot_remains_strict(computed_comparison, no_arial):
+    results, _ = computed_comparison
+    with pytest.raises(RuntimeError, match="Arial is required"):
+        comparison.plot_comparison(results)
+
+
+@pytest.mark.parametrize("preview_source", ["argument", "environment"])
+def test_explicit_no_arial_preview_records_and_labels_substitution(
+    tmp_path, computed_comparison, no_arial, monkeypatch, preview_source,
+):
+    import matplotlib.pyplot as plt
+
+    results, _ = computed_comparison
+    monkeypatch.setattr(comparison, "evaluate_cases", lambda cases: results.copy())
+    arguments = {}
+    if preview_source == "environment":
+        monkeypatch.setenv("EA_ALLOW_FONT_FALLBACK", "1")
+    else:
+        arguments["allow_font_fallback"] = True
+
+    with pytest.warns(UserWarning, match="Preview font substitution"):
+        comparison.run_comparison(tmp_path, **arguments)
+    manifest = json.loads((tmp_path / "comparison_run.json").read_text(encoding="utf-8"))
+    assert manifest["font_provenance"]["fallback_used"] is True
+    assert manifest["font_provenance"]["actual_family"].casefold() != "arial"
+    assert (tmp_path / "comparison_case.png").stat().st_size > 1000
+
+    with pytest.warns(UserWarning, match="Preview font substitution"):
+        figure = comparison.plot_comparison(results, **arguments)
+    try:
+        assert any(text.get_text().startswith("Preview font:") for text in figure.texts)
+        assert all(text.get_fontweight() in ("normal", "regular", 400)
+                   for text in figure.findobj(match=lambda artist: hasattr(artist, "get_fontweight")))
+    finally:
+        plt.close(figure)
+
+
+def test_explicit_strict_plot_overrides_preview_environment(
+    computed_comparison, no_arial, monkeypatch,
+):
+    monkeypatch.setenv("EA_ALLOW_FONT_FALLBACK", "1")
+    results, _ = computed_comparison
+    with pytest.raises(RuntimeError, match="Arial is required"):
+        comparison.plot_comparison(results, allow_font_fallback=False)
+
+
+def test_cli_forwards_explicit_preview_option(tmp_path, computed_comparison, monkeypatch):
+    results, _ = computed_comparison
+    observed = {}
+
+    def capture_run(output_dir, **kwargs):
+        observed.update(kwargs)
+        return results
+
+    monkeypatch.setattr(comparison, "run_comparison", capture_run)
+    assert comparison.main(["--output-dir", str(tmp_path), "--allow-font-fallback"]) == 0
+    assert observed["allow_font_fallback"] is True

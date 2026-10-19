@@ -115,8 +115,6 @@ def _prepare_inputs(
         scale <= 0.0 or coarse_count < 4 or local_count < 3
         or half_window < 0.0 or refine_ratio <= 0.0
         or min(maximum, tolerance, horizon, coarse_dt, fine_dt) <= 0.0
-        or int(round(horizon / coarse_dt)) < 1
-        or int(round(horizon / fine_dt)) < 1
     ):
         return None
 

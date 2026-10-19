@@ -111,11 +111,18 @@ def evaluate_cases(cases: "pd.DataFrame") -> "pd.DataFrame":
     return results
 
 
-def plot_comparison(results: "pd.DataFrame", output_path: str | Path | None = None) -> "Figure":
+def plot_comparison(
+    results: "pd.DataFrame",
+    output_path: str | Path | None = None,
+    *,
+    allow_font_fallback: bool | None = None,
+) -> "Figure":
     """Plot initial geometry and separate EA/TTC axes; return an unclosed figure.
 
     No GUI is opened. A notebook can display the returned figure and close it
-    when finished. Plotting dependencies are imported only here.
+    when finished. Plotting dependencies are imported only here. Arial remains
+    required unless preview fallback is explicitly enabled through this argument
+    or EA_ALLOW_FONT_FALLBACK=1. Pass False to require Arial even in preview mode.
     """
     _validate_equal_ttc(results)
     import matplotlib.pyplot as plt
@@ -128,7 +135,7 @@ def plot_comparison(results: "pd.DataFrame", output_path: str | Path | None = No
         raise ValueError("This example exports PNG only; use a .png output path.")
 
     colors = FIG1_COLORS
-    with figure_style(allow_font_fallback=False):
+    with figure_style(allow_font_fallback=allow_font_fallback) as font:
         fig = plt.figure(figsize=(11.4, 6.4), facecolor="white")
         grid = fig.add_gridspec(2, 2, width_ratios=[1.65, 1.0])
         geometry_axes = [fig.add_subplot(grid[index, 0]) for index in range(2)]
@@ -140,6 +147,9 @@ def plot_comparison(results: "pd.DataFrame", output_path: str | Path | None = No
                      fontsize=16, fontweight="normal", color=colors["ink"])
         fig.text(0.065, 0.91, "Independent instantaneous states; all headings and yaw rates are zero.",
                  fontsize=10, color=colors["muted"], fontweight="normal")
+        if font["fallback_used"]:
+            fig.text(0.98, 0.015, f"Preview font: {font['actual_family']} (not Arial)",
+                     ha="right", fontsize=8, color=colors["muted"], fontweight="normal")
 
         maximum_x = max(float(row.b_x_m + row.b_length_m / 2.0)
                         for row in results.itertuples()) + 3.0
@@ -212,12 +222,14 @@ def run_comparison(
     cases_csv: str | Path | None = None,
     make_plot: bool = True,
     overwrite: bool = False,
+    allow_font_fallback: bool | None = None,
 ) -> "pd.DataFrame":
     """Compute equal-TTC cases and export only after all data/font/plot checks.
 
     Existing output files require ``overwrite=True``. Inputs are always
     protected, and all figure rendering finishes in memory before any output
-    CSV or manifest is changed.
+    CSV or manifest is changed. Preview fallback requires an explicit True or
+    EA_ALLOW_FONT_FALLBACK=1; its actual font is recorded in the run manifest.
     """
     import pandas as pd
 
@@ -265,8 +277,10 @@ def run_comparison(
         import matplotlib.pyplot as plt
         from evasive_acceleration.plotting import resolve_figure_font
 
-        metadata["font_provenance"] = resolve_figure_font(allow_font_fallback=False)
-        figure = plot_comparison(results)
+        metadata["font_provenance"] = resolve_figure_font(
+            allow_font_fallback=allow_font_fallback
+        )
+        figure = plot_comparison(results, allow_font_fallback=allow_font_fallback)
         try:
             image = io.BytesIO()
             figure.savefig(image, format="png", dpi=180, facecolor="white")
@@ -323,9 +337,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="Two synthetic straight-following input states.")
     parser.add_argument("--overwrite", action="store_true",
                         help="Replace existing comparison outputs; input files remain protected.")
+    parser.add_argument("--allow-font-fallback", action="store_true", default=None,
+                        help="Explicitly allow a labelled non-Arial preview; never for publication. "
+                             "EA_ALLOW_FONT_FALLBACK=1 also enables preview mode.")
     args = parser.parse_args(argv)
     try:
-        results = run_comparison(args.output_dir, cases_csv=args.input, overwrite=args.overwrite)
+        results = run_comparison(
+            args.output_dir, cases_csv=args.input, overwrite=args.overwrite,
+            allow_font_fallback=args.allow_font_fallback,
+        )
     except (OSError, ValueError, ImportError, RuntimeError) as error:
         parser.exit(1, f"Comparison failed: {error}\n")
     print(results[["case_id", "clearance_m", "closing_speed_m_s", "TTC_s", "EA_m_s2"]]
