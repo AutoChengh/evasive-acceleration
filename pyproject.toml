@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evasive-acceleration"
-version = "0.2.0.dev0"
+version = "0.3.0.dev1"
 description = "Evasive Acceleration for instantaneous traffic-conflict assessment"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,3 +34,6 @@ py-modules = ["core_ea", "single_frame", "yaw_rate", "batch_compute", "baseline_
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["evasive_acceleration*"]
+
+[tool.setuptools.package-data]
+"evasive_acceleration._paper" = ["*.json"]

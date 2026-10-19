@@ -63,7 +63,7 @@ def test_installed_package_imports_from_unrelated_directory(tmp_path):
 
 
 @pytest.mark.parametrize("turn_rate", [0.0, 0.08])
-def test_high_level_api_matches_unchanged_keyword_solver(turn_rate):
+def test_high_level_api_matches_compatible_keyword_solver(turn_rate):
     from core_ea import compute_ea as legacy_compute_ea
     from evasive_acceleration import RoadUserState, build_compute_kwargs, compute_ea
 

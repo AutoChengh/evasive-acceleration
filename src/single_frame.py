@@ -7,7 +7,7 @@ This module is intended for real-time or instant-evaluation use cases, where
 the user wants to input the current instantaneous states of two road users and
 obtain the EA value for that single frame immediately.
 
-It reuses the existing solver implemented in ``core_ea.py`` and provides:
+It uses the paper-aligned finite-horizon solver through ``core_ea.py`` and provides:
     - a clean dataclass-based state interface;
     - basic input validation;
     - a minimal command-line interface;
@@ -142,6 +142,8 @@ class RoadUserState:
 
         if self.length <= 0.0 or self.width <= 0.0:
             raise ValueError("length and width must be strictly positive.")
+        if self.speed < 0.0:
+            raise ValueError("speed is a magnitude and must be non-negative.")
 
     def as_tuple(self) -> Tuple[float, float, float, float, float, float, float]:
         """Return the state as a 7-tuple."""
@@ -206,6 +208,8 @@ class RoadUserKinematicState:
             raise ValueError("All kinematic state values must be finite real numbers.")
         if self.length <= 0.0 or self.width <= 0.0:
             raise ValueError("length and width must be strictly positive.")
+        if self.speed < 0.0:
+            raise ValueError("speed is a magnitude and must be non-negative.")
 
 
 def build_state_with_estimated_yaw_rate(
@@ -275,8 +279,19 @@ def _validate_solver_config(
     a_max: float,
     tol: float,
     size_scale: float,
+    local_fine_half_window_deg: float,
+    fine_refine_ratio: float,
 ) -> None:
     """Validate numerical solver settings."""
+    settings = {
+        "dt_coarse": dt_coarse, "dt_fine": dt_fine, "T_total": T_total,
+        "a_max": a_max, "tol": tol, "size_scale": size_scale,
+        "local_fine_half_window_deg": local_fine_half_window_deg,
+        "fine_refine_ratio": fine_refine_ratio,
+    }
+    for name, value in settings.items():
+        if not math.isfinite(float(value)):
+            raise ValueError(f"{name} must be finite.")
     if coarse_sector_num < 4:
         raise ValueError("coarse_sector_num must be at least 4.")
     if local_fine_dir_num < 3:
@@ -291,6 +306,10 @@ def _validate_solver_config(
         raise ValueError("tol must be strictly positive.")
     if size_scale <= 0.0:
         raise ValueError("size_scale must be strictly positive.")
+    if not 0.0 <= local_fine_half_window_deg <= 180.0:
+        raise ValueError("local_fine_half_window_deg must be between 0 and 180.")
+    if fine_refine_ratio <= 0.0:
+        raise ValueError("fine_refine_ratio must be strictly positive.")
 
 
 # ============================================================================
@@ -326,6 +345,8 @@ def build_compute_kwargs(
         a_max=float(a_max),
         tol=float(tol),
         size_scale=float(size_scale),
+        local_fine_half_window_deg=float(local_fine_half_window_deg),
+        fine_refine_ratio=float(fine_refine_ratio),
     )
 
     return {

@@ -1,7 +1,7 @@
 """Compute one EA value from states that already include yaw rate.
 
 Install the package, then run ``python examples/provided_state.py``.
-The expected result is approximately 4.828 m/s².
+The expected result is approximately 4.800 m/s² with the paper numerical core.
 """
 
 import math

@@ -25,8 +25,9 @@ The example saves four files:
 - `comparison_results.csv`: those states plus actual EA, TTC, DRAC, clearance,
   and closing speed, with units in the column names.
 - `comparison_case.png`: initial geometry and separate EA/TTC panels.
-- `comparison_run.json`: package version, input-file SHA-256, default solver
-  settings, assumptions, and the actual resolved plotting font.
+- `comparison_run.json`: package version, core identity/source provenance,
+  input-file SHA-256, default solver settings, assumptions, and the actual
+  resolved plotting font.
 
 The two case rows are independent states, not two consecutive frames. There
 is no yaw-rate estimation or use of future observations. Existing output
@@ -45,10 +46,11 @@ New targets are created exclusively to prevent accidental replacement.
 When replacement is requested, prepared artifacts replace old files one at
 a time; this is not a multi-file atomic filesystem transaction.
 
-The script calls the public `compute_ea` API and the existing
-`baseline_risk_metrics.compute_real_time_metrics_dict` function. The solver
-and the baseline implementations are unchanged. No EA search settings are
-relaxed for this demonstration.
+The script calls the public `compute_ea` API backed by the paper's finite-horizon
+numerical core, plus the existing
+`baseline_risk_metrics.compute_real_time_metrics_dict` function. The historical
+baseline implementation is unchanged. No EA search settings are relaxed for
+this demonstration.
 
 ## Complete inputs
 
@@ -80,7 +82,7 @@ TTC = clearance / closing_speed
 | Initial bumper clearance | 4 m | 20 m |
 | Closing speed | 2 m/s | 10 m/s |
 | Computed TTC | 2.00 s | 2.00 s |
-| Computed EA, approximately | 0.500 m/s² | 0.874 m/s² |
+| Computed EA, approximately | 0.500 m/s² | 0.871 m/s² |
 | Computed longitudinal DRAC | 0.500 m/s² | 2.500 m/s² |
 
 Custom input cases must also have equal finite positive TTC values (relative
@@ -100,11 +102,9 @@ relative acceleration directions; it is not restricted to longitudinal
 braking. In Case 2, its EA is therefore lower than longitudinal DRAC.
 
 The nominal trajectories for CTCT, CTCV, CVCT, and CVCV coincide here because
-both yaw rates are zero. The implementation's numerical branches and
-approximations can nevertheless produce slightly different mode-specific EA
-values. The reported EA uses the existing four-mode arithmetic mean; the
-example does not replace it with one branch or require exact equality of
-the four numerical outputs.
+both yaw rates are zero. All four use the same finite-horizon numerical
+procedure and therefore agree for these inputs. The reported EA still uses
+the four-mode arithmetic mean; the example does not substitute a single branch.
 
 This does not prove that EA is universally better than TTC, define an
 empirical safety threshold, or establish the best response for a real driver.

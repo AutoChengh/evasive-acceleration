@@ -1,15 +1,19 @@
 # Evasive Acceleration (EA)
 
-This is an independent **v2 evaluation repository**, not a replacement for
-the [original EA repository](https://github.com/AutoChengh/evasive-acceleration).
-The original repository is not updated by this upload. The EA solver and
-historical baseline source remain unchanged; the additions focus on usability,
-recomputable examples, plotting, notebooks, and automated tests.
+This independent v2 evaluation repository uses a paper-aligned finite-horizon
+core with fine-grid candidate verification. It does not replace or update the
+[original EA repository](https://github.com/AutoChengh/evasive-acceleration).
 
-Compute two-dimensional interaction risk from the current states of two road
-users. EA measures the minimum constant relative acceleration needed to avoid
-predicted collision, in **m/s²**. Supply yaw rates directly, or estimate missing
-yaw rates from current and historical headings with the same EA solver.
+Evasive Acceleration (EA) quantifies driving risk by measuring the difficulty
+of collision avoidance. Intuitively, EA finds the smallest two-dimensional
+relative acceleration needed to change the projected motion and avoid collision.
+
+EA captures two-dimensional interaction risk. Evaluated on 44,180 naturalistic
+interactions from five datasets and 658 reconstructed crashes, it showed stronger
+overall crash–noncrash discrimination than TTC and other primary baselines.
+
+Use EA to analyze traffic conflicts, identify high-risk scenarios, and evaluate
+automated-driving safety.
 
 Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
@@ -66,8 +70,8 @@ After installing the visualization extras, reproduce the comparison with:
 python examples/comparison_case.py --output-dir outputs/comparison_case
 ```
 
-Both cases have TTC = 2.00 s, while the unchanged solver gives EA of about
-0.500 and 0.874 m/s². These are explicitly synthetic illustrations, not paper
+Both cases have TTC = 2.00 s, while the paper-version solver gives EA of about
+0.500 and 0.871 m/s². These are explicitly synthetic illustrations, not paper
 experiment data or evidence for a universal safety threshold. EA permits
 two-dimensional relative avoidance, not only lane-constrained braking.
 
@@ -101,7 +105,7 @@ ea single
 ea batch --input examples/data/without_yaw_rate.csv
 ```
 
-The single-frame example prints approximately `EA = 4.828 m/s^2`. The batch
+The single-frame example prints approximately `EA = 4.800 m/s^2`. The batch
 command automatically estimates missing yaw rates. Open:
 
 ```text
@@ -172,7 +176,7 @@ agent_b = RoadUserState(
     length=4.7, width=1.9, yaw_rate=0.0,
 )
 ea = compute_ea(agent_a, agent_b)
-print(f"EA = {ea:.3f} m/s^2")  # Approximately 4.828 m/s².
+print(f"EA = {ea:.3f} m/s^2")  # Approximately 4.800 m/s².
 ```
 
 ### Yaw rate is unavailable
@@ -258,8 +262,13 @@ from EA.
 The causal estimator wraps heading differences to `[-π, π)`, divides by the
 actual elapsed time, and applies a rate EWMA. Defaults are `tau = 0.6 s`,
 output deadband `0.002 rad/s`, and four output decimals. The internal state
-keeps full precision. These preprocessing settings, initialization behavior,
-and limitations are documented in [docs/causal_yaw_rate.md](docs/causal_yaw_rate.md).
+keeps full precision. These preprocessing settings and initialization behavior
+are documented in [docs/causal_yaw_rate.md](docs/causal_yaw_rate.md).
+
+Both supplied and estimated yaw rates feed the same numerical EA core. To
+recompute paper results, use the yaw-rate values provided with the corresponding
+paper inputs. The causal EWMA path is available for your own data when yaw rate
+is missing; it need not reproduce those supplied observations.
 
 ## Command-line reference
 
@@ -293,8 +302,8 @@ code installed from a wheel should be given explicit external input paths.
 
 | Output | Meaning |
 |---|---|
-| `EA_CVCV`, `EA_CVCT`, `EA_CTCV`, `EA_CTCT` | EA for the four nominal motion combinations, in m/s² |
-| `EA` | Arithmetic mean of the four mode-specific values, in m/s² |
+| `EA_CVCV`, `EA_CVCT`, `EA_CTCV`, `EA_CTCT` | EA for the four nominal motion combinations, in m/s²; `CT` denotes CTRV |
+| `EA` | Arithmetic mean of the four unrounded mode-specific magnitudes, in m/s² |
 | `EA_Yawrate_A_used_rad_s`, `EA_Yawrate_B_used_rad_s` | Actual yaw rates used by the solver |
 | `EA_Yawrate_A_source`, `EA_Yawrate_B_source` | Provided, estimated, initialization, or error provenance |
 | `EA_Yawrate_A_initialized`, `EA_Yawrate_B_initialized` | Estimated: a backward difference was available; provided: the supplied value was finite |
@@ -303,12 +312,13 @@ code installed from a wheel should be given explicit external input paths.
 | `EA_status`, `EA_error` | EA computation status and failure detail |
 | `EA_baseline_error` | Separate error detail for optional baseline calculations |
 
-`EA = 0` means no added relative acceleration is required under the evaluated
-motion assumptions and finite solver horizon. A yaw-rate value of `0` on the
-first estimated observation is an initialization placeholder, not an observed
-zero derivative. `NaN` indicates an unavailable result; inspect status and
-error columns. `inf` means the search did not find a solution within its
-configured limits; it does not establish physically unavoidable collision.
+`EA = 0` means no added relative acceleration is required over the evaluated
+motion models and finite horizon. `inf` is the paper core's result for current
+body contact or no feasible acceleration within the configured search.
+`NaN` indicates an unavailable or invalid computation; inspect status and error
+columns. A first estimated yaw rate of `0` is an initialization placeholder,
+not an observed zero derivative. The Python API retains full numerical precision;
+batch CSVs round the EA columns to four decimal places, as in the paper pipeline.
 
 Provided rows report a sample count of zero because no heading-history
 estimate was used for that row. Read initialization and sample count together
@@ -324,23 +334,47 @@ The new comparison avoids initially overlapping boxes.
 
 ## What EA computes
 
-The solver evaluates nominal constant-velocity (CV) and constant-turn-rate
-(CT) combinations for the two road users, then averages the four EA values.
-CT uses the supplied or estimated yaw rate; CV uses zero yaw rate.
+Two nominal motion models are used for each road user:
 
-Numerical settings such as `T_total`, `dt_coarse`, `dt_fine`, `a_max`, and
-direction-grid sizes control the finite-horizon search and its approximation
-accuracy. Report these settings and the yaw-rate preprocessing configuration
-when reproducing an experiment. The physical EA definition and the numerical
-search remain the same for both yaw-rate input paths.
+- **CV:** constant speed and heading.
+- **CTRV:** constant speed and yaw rate; called `CT` in the compatible output
+  column names.
 
-The paper frames EA in two-dimensional relative motion space, considering the
-directions of collision-avoiding acceleration and retaining the least costly
-one. It reports evaluation on 44,180 naturalistic interactions from five open
-datasets across three countries and 658 reconstructed crashes. Its reported
-runtime of approximately 5 ms depends on the implementation and hardware;
-first-call JIT compilation should be excluded when measuring steady-state
-speed. See the paper for experiment protocols and comparisons.
+The four ordered pairings are CV–CV, CV–CTRV, CTRV–CV, and CTRV–CTRV. For each,
+EA is the minimum magnitude of a constant two-dimensional relative acceleration
+that avoids predicted body contact. The final score is the arithmetic mean of
+these four scalar magnitudes, not a mean of acceleration vectors.
+
+All four pairings use the same finite-horizon numerical search, including
+CV–CV. For each candidate direction, the solver combines collision-producing
+acceleration intervals and finds the smallest feasible magnitude. A coarse
+direction/time search is followed by local refinement. Every local direction
+is solved on the fine time grid, and finite candidates must pass an actual
+SAT collision check. No unverified coarse-grid value is returned as a fallback.
+
+Version `0.3.0.dev1` adds verified boundary handling and full local fine-grid
+evaluation to the earlier paper-core migration. The frozen paper reference is
+retained for comparison. State, batch, and causal yaw-rate interfaces remain
+available; numerical results are not required to preserve earlier solver defects.
+
+| Setting | Default |
+|---|---:|
+| Prediction horizon `T_total` | 10 s |
+| Coarse / fine time step `dt_coarse` / `dt_fine` | 0.1 / 0.02 s |
+| Maximum acceleration `a_max` | 100 m/s² |
+| Interval connectivity tolerance `tol` | 0.001 m/s² |
+| Coarse directions | 72 |
+| Local fine search | 101 directions within ±5° |
+| Geometry size scale | 1.0 |
+
+Report numerical settings and yaw-rate preprocessing when reproducing an
+experiment. Both yaw-rate input paths use this same four-pairing core; the
+paper code's separate nine-pairing CTRA extension is not included in `EA`.
+The `fine_refine_ratio` argument is accepted for compatibility but no longer
+skips fine verification. With custom time steps, the final verification uses
+the smaller of `dt_coarse` and `dt_fine`.
+See the paper for evaluation protocols and comparisons, and
+[validation details](docs/validation.md) for source consistency and timing checks.
 
 ## Generate GIFs from a source checkout
 
@@ -357,7 +391,8 @@ time-range options. The rendering script is separate from computation.
 
 ```text
 src/evasive_acceleration/        Installable API and command-line entry point
-src/core_ea.py                  Original EA solver
+src/core_ea.py                  Compatible adapter to the paper numerical core
+src/evasive_acceleration/_paper/ Frozen paper calculator, motion and solver modules
 src/single_frame.py             State helpers and compatible source entry point
 src/batch_compute.py            CSV pipeline and compatible source entry point
 src/yaw_rate.py                 Causal yaw-rate estimator
@@ -382,11 +417,11 @@ python -m pip install -e ".[batch,viz,fast,dev]"
 python -m pytest
 ```
 
-Tests check the original solver result, yaw-rate numerics and causality,
-installed imports, and batch input/output behavior.
-They also check frozen original four-mode EA values, the comparison inputs and
-results, custom-data conversion, output protection, and figure typography.
-The EA solver and baseline source are protected by normalized source hashes.
+Tests check paper-core numerical consistency, yaw-rate numerics and causality,
+installed imports, and batch input/output behavior. They also cover the
+comparison inputs and results, custom-data conversion, output protection, and
+figure typography. The vendored paper modules and historical baseline source
+are protected by normalized source hashes.
 
 ```bash
 python tools/check_core_integrity.py

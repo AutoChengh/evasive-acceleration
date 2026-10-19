@@ -4,8 +4,8 @@ Run from a source checkout after installing ``.[viz,fast]``::
 
     python examples/comparison_case.py --output-dir outputs/comparison_case
 
-The original EA solver and baseline functions are called without changing
-their defaults. These inputs are illustrations, not paper experiment data.
+The paper-version finite-horizon EA core and historical baseline functions are
+called with their defaults. These inputs are illustrations, not paper experiment data.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 from baseline_risk_metrics import compute_real_time_metrics_dict
+from core_ea import CORE_ID, get_core_provenance
 from evasive_acceleration import (
     RoadUserState,
     __version__,
@@ -242,6 +243,8 @@ def run_comparison(
     metadata = {
         "synthetic": True,
         "package_version": __version__,
+        "core_id": CORE_ID,
+        "core_provenance": get_core_provenance(),
         "input_file": str(source.resolve()),
         "input_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "solver_settings": {key: compute_kwargs[key] for key in SOLVER_FIELDS},

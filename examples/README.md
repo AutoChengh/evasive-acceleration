@@ -1,6 +1,7 @@
 # Runnable examples
 
-The original small examples below still work unchanged. New entry points:
+The examples use the paper's finite-horizon EA core through the existing public
+interfaces. Start with:
 
 - [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC
   states with different EA, and export full inputs, results, settings, and a
@@ -24,7 +25,7 @@ ea batch --input examples/data/without_yaw_rate.csv
 ea batch --input examples/data/mixed_yaw_rate.csv
 ```
 
-The first Python example prints `EA = 4.828 m/s^2`. The history example prints
+The first Python example prints `EA = 4.800 m/s^2`. The history example prints
 the estimated yaw rates and initialization diagnostics before EA. Imports use
 the installed public package, so both scripts can be copied elsewhere.
 

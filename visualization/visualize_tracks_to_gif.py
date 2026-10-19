@@ -51,7 +51,7 @@ from PIL import Image
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-DEFAULT_INPUT_DIR = PROJECT_ROOT / "outputs" / "batch_results"
+DEFAULT_INPUT_DIR = PROJECT_ROOT / "outputs" / "batch_results" / "auto"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "gifs"
 
 
@@ -184,7 +184,11 @@ def build_ea_color_mapper(ea_max: float) -> Tuple[Callable, Normalize]:
     norm = Normalize(vmin=EA_MIN, vmax=float(ea_max))
 
     def ea_to_rgba(ea_value, alpha: float = 1.0) -> Tuple[float, float, float, float]:
-        ea = clip_val(safe_float(ea_value, 0.0), EA_MIN, float(ea_max))
+        value = safe_float(ea_value, float("nan"))
+        if math.isnan(value) or value < 0.0:
+            # Missing/invalid results are not collision-free zero-risk values.
+            return (0.65, 0.65, 0.65, alpha)
+        ea = clip_val(value, EA_MIN, float(ea_max))
         rgba = RISK_CMAP(norm(ea))
         return (rgba[0], rgba[1], rgba[2], alpha)
 

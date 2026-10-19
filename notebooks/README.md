@@ -1,7 +1,7 @@
 # Interactive EA quickstart
 
 The notebook reuses the same public API, synthetic comparison, custom-data
-adapter, and original EA solver as the command-line examples. It is not a
+adapter, and paper-version finite-horizon EA core as the command-line examples. It is not a
 reproduction of the paper's statistical experiments.
 
 ## Local Jupyter
@@ -64,12 +64,12 @@ notebook configuration. The replacement is printed and recorded. Such an
 output is not claimed to meet the Arial publication requirement. This explicit
 mode allows hosted Linux CI to test the execution logic without bundling fonts.
 
-## Interpretation
+## Reading notebook outputs
 
 The notebook compares raw EA and TTC on separate axes; it does not normalize
 them into a common score or propose a universal risk threshold. Non-finite
 values are omitted from curves. The original baseline's collision/undefined
 value conventions are not corrected here; these synthetic examples avoid
-already intersecting boxes. Headings and yaw rates influence nominal futures;
-turning extrapolation can overestimate a conflict. EA is not a collision
+already intersecting boxes. Headings and yaw rates define the nominal futures.
+Read EA as the required relative-acceleration magnitude in m/s², rather than a
 probability or a directly executable ego acceleration command.

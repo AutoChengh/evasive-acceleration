@@ -1,0 +1,70 @@
+{
+  "reference": {
+    "name": "39103 frozen paper EA calculator, verified 2026-10-20",
+    "generation": "Canonical compute_frame_metrics(state14, 0, 0, EAConfig(output_decimals=13, ...)); select the four CV/CTRV components and EA. size_scale is applied to both lengths and widths before the reference call. No compatibility-adapter code was used to generate these constants.",
+    "precision": "Reference outputs recorded at 13 decimal places; default paper CSV uses 4 decimals after averaging unrounded components. API assertions allow 1e-10 absolute/relative floating-point tolerance.",
+    "units": "m, s, rad, m/s, rad/s; EA in m/s^2",
+    "state_order": ["x", "y", "speed", "heading", "length", "width", "yaw_rate"],
+    "nonfinite_encoding": "inf is a JSON string, not non-standard JSON Infinity",
+    "source_sha256_lf_normalized": {
+      "calculator.py": "ba4aad2ed1c5da9841a421af8ddad0193c405a770176ff703427b564757a4693",
+      "config.py": "6f51954a8d24590796b747638522f927378de4273aaaad293387e41dc5b4ae33",
+      "motion.py": "709e4bf8663bcf580e27ede058d548bf0d40a8da35f199823fb09c5650867625",
+      "numerical_solver.py": "dc90a8ce7aa67afda0be250c88a9389cd0168bb36a7aadee4d5e9cb0e52ee7ff"
+    },
+    "default_settings": {
+      "T_total": 10.0, "dt_coarse": 0.1, "dt_fine": 0.02,
+      "coarse_sector_num": 72, "local_fine_half_window_deg": 5.0,
+      "local_fine_dir_num": 101, "fine_refine_ratio": 1.15,
+      "a_max": 100.0, "tol": 0.001, "size_scale": 1.0
+    }
+  },
+  "cases": [
+    {
+      "id": "head_on", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0],
+      "agent_b": [20, 0, 8, 3.141592653589793, 4.7, 1.9, 0], "settings": {},
+      "expected": {"EA_CVCV": 4.8000965231709, "EA_CVCT": 4.8000965231709, "EA_CTCV": 4.8000965231709, "EA_CTCT": 4.8000965231709, "EA": 4.8000965231709}
+    },
+    {
+      "id": "turning_both", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0.08],
+      "agent_b": [20, 0, 8, 3.141592653589793, 4.7, 1.9, -0.04], "settings": {},
+      "expected": {"EA_CVCV": 4.8000965231709, "EA_CVCT": 4.3855626206064, "EA_CTCV": 3.6453490574511, "EA_CTCT": 4.2627359361918, "EA": 4.273436034355}
+    },
+    {
+      "id": "parallel_separated", "agent_a": [0, 0, 5, 0, 4.5, 1.8, 0],
+      "agent_b": [0, 100, 5, 0, 4.5, 1.8, 0], "settings": {},
+      "expected": {"EA_CVCV": 0, "EA_CVCT": 0, "EA_CTCV": 0, "EA_CTCT": 0, "EA": 0}
+    },
+    {
+      "id": "current_contact", "agent_a": [0, 0, 5, 0, 4.5, 1.8, 0],
+      "agent_b": [4.5, 0, 5, 0, 4.5, 1.8, 0], "settings": {},
+      "expected": {"EA_CVCV": "inf", "EA_CVCT": "inf", "EA_CTCV": "inf", "EA_CTCT": "inf", "EA": "inf"}
+    },
+    {
+      "id": "no_feasible_direction", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0],
+      "agent_b": [20, 0, 8, 3.141592653589793, 4.7, 1.9, 0], "settings": {"a_max": 0.01},
+      "expected": {"EA_CVCV": "inf", "EA_CVCT": "inf", "EA_CTCV": "inf", "EA_CTCT": "inf", "EA": "inf"}
+    },
+    {
+      "id": "outside_horizon", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0],
+      "agent_b": [100, 0, 9, 0, 4.5, 1.8, 0], "settings": {},
+      "expected": {"EA_CVCV": 0, "EA_CVCT": 0, "EA_CTCV": 0, "EA_CTCT": 0, "EA": 0}
+    },
+    {
+      "id": "fine_only_contact", "agent_a": [0, 0, 0, 0, 0.05, 0.05, 0],
+      "agent_b": [-0.4, 0, 10, 0, 0.05, 0.05, 0], "settings": {"T_total": 0.2},
+      "expected": {"EA_CVCV": 62.5, "EA_CVCT": 62.5, "EA_CTCV": 62.5, "EA_CTCT": 62.5, "EA": 62.5}
+    },
+    {
+      "id": "custom_grid_turning", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0.08],
+      "agent_b": [20, 0, 8, 3.141592653589793, 4.7, 1.9, -0.04],
+      "settings": {"T_total": 3.0, "dt_coarse": 0.2, "dt_fine": 0.04, "coarse_sector_num": 36, "local_fine_dir_num": 51, "local_fine_half_window_deg": 7.0, "fine_refine_ratio": 1.2, "tol": 0.0005},
+      "expected": {"EA_CVCV": 4.7778937263271, "EA_CVCT": 4.2829574321962, "EA_CTCV": 3.6439957574116, "EA_CTCT": 4.1681162304282, "EA": 4.2182407865908}
+    },
+    {
+      "id": "scaled_vehicle_geometry", "agent_a": [0, 0, 10, 0, 4.5, 1.8, 0.08],
+      "agent_b": [20, 0, 8, 3.141592653589793, 4.7, 1.9, -0.04], "settings": {"size_scale": 0.9},
+      "expected": {"EA_CVCV": 4.0298331553253, "EA_CVCT": 3.5775159145566, "EA_CTCV": 2.99352344163, "EA_CTCT": 3.4524257668981, "EA": 3.5133245696025}
+    }
+  ]
+}

@@ -3,6 +3,7 @@ recursive-include docs *.md
 recursive-include examples *.md *.py *.csv
 recursive-include notebooks *.md *.ipynb
 recursive-include tools *.py
+recursive-include visualization *.py
 recursive-include assets/figures *.png *.pdf
 recursive-include demo_data *.csv
-recursive-include tests *.py
+recursive-include tests *.py *.json
