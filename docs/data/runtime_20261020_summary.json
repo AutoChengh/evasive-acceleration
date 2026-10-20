@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "experiment": "paired single-pass full-cohort implementation check",
+  "date": "2026-10-20",
+  "source_commit": "7d6535dec7bbd3f1048fb45f73d6f7b8b069f360",
+  "core_id": "paper-aligned-verified-cv-ctrv-20261020",
+  "unique_frames": 857820,
+  "input_files": 4418,
+  "passes_per_implementation": 1,
+  "total_EA_calls": 1715640,
+  "all_original_latency_observations_retained": true,
+  "primary_measurements_replaced_with_selected_replays": false,
+  "environment": {
+    "platform": "Linux",
+    "cpu": "Intel Xeon Gold 6226R",
+    "nominal_frequency_GHz": 2.9,
+    "logical_cpu_affinity": [20],
+    "python": "3.12.13",
+    "numpy": "2.3.5",
+    "numba": "0.62.1",
+    "library_threads": 1
+  },
+  "settings": {
+    "T_total": 10.0,
+    "dt_coarse": 0.1,
+    "dt_fine": 0.02,
+    "a_max": 100.0,
+    "tol": 0.001,
+    "coarse_sector_num": 72,
+    "local_fine_half_window_deg": 5.0,
+    "local_fine_dir_num": 101,
+    "fine_refine_ratio": 1.15,
+    "size_scale": 1.0
+  },
+  "timing_scope": "External perf_counter_ns around four mode evaluations and aggregate mean; parsing, conversion, output writes, warm-up and first compilation excluded",
+  "reference": {
+    "mean_ms": 4.945195334338207,
+    "median_ms": 2.645142,
+    "p95_ms": 16.992378349999996,
+    "p99_ms": 19.876168749999987,
+    "max_ms": 28.189203
+  },
+  "verified": {
+    "mean_ms": 2.4239236865566203,
+    "median_ms": 0.407963,
+    "p95_ms": 12.57174055,
+    "p99_ms": 15.303499159999998,
+    "max_ms": 567.984688,
+    "over_20ms": 7
+  },
+  "frozen_source_sha256": {
+    "benchmark": "89daa2ec5239f9405a8efe7b3288406c5204a05bf2d331ff412c87f1963c92d0",
+    "reference": "6db75f9704cc8885d5d8a24b95d73a8365e74732001de9e7e9489cf4fd3fe2dd",
+    "verified_core_adapter": "89d70764b6f4bf94fddc31b8c4a0a1a65cbb39b180c698ee641ffb7d153b63eb",
+    "paired_frames": "16064766f9aa7e0c48c55be5fe37a9f68713f4524105c937bb7b2928e4080890"
+  },
+  "separate_over15ms_diagnostic": {
+    "selected_frames": 10291,
+    "source_files": 692,
+    "passes": 1,
+    "mean_ms": 15.588503578660964,
+    "p95_ms": 16.7164255,
+    "max_ms": 20.487906,
+    "over_15ms": 8471,
+    "over_20ms": 2,
+    "numerical_max_absolute_difference": 0.0,
+    "audit_sha256": "3aba5d3a1df96fb11965e333a26f8fc404af5091590077c8f5654f4ac367c6a9"
+  },
+  "note": "Aggregate implementation evidence, not full paper datasets, a hard real-time bound, or a full-paper numerical-equivalence claim. Later input-repaired records are separate from the unmodified timing distribution."
+}

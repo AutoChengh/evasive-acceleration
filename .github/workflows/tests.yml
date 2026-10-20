@@ -57,6 +57,7 @@ jobs:
           python examples/from_history.py
           ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
           python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
+          ea benchmark --max-frames 1 --output-dir outputs/ci_benchmark
       - name: Build source and wheel distributions
         run: python -m build
       - name: Smoke-test wheel in an isolated environment
@@ -82,8 +83,9 @@ jobs:
           import sys
           import core_ea
           import evasive_acceleration as ea
+          from evasive_acceleration import benchmark
           prefix = Path(sys.prefix).resolve()
-          for module in (core_ea, ea):
+          for module in (core_ea, ea, benchmark):
               assert Path(module.__file__).resolve().is_relative_to(prefix), module.__file__
           a = ea.RoadUserState(0, 0, 10, 0, 4.5, 1.8, 0)
           b = ea.RoadUserState(20, 0, 8, math.pi, 4.7, 1.9, 0)
@@ -97,6 +99,9 @@ jobs:
           """
               subprocess.run([str(python), "-I", "-c", check], check=True, cwd=sandbox)
               subprocess.run([str(python), "-I", "-m", "evasive_acceleration", "--version"],
+                             check=True, cwd=sandbox)
+              subprocess.run([str(python), "-I", "-m", "evasive_acceleration", "benchmark",
+                              "--max-frames", "1", "--output-dir", str(sandbox / "benchmark")],
                              check=True, cwd=sandbox)
           PY
 

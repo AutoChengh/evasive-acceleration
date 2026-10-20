@@ -1,4 +1,4 @@
-"""Small command dispatcher for single-frame and CSV workflows."""
+"""Command dispatcher for EA evaluation and portable runtime measurement."""
 
 from __future__ import annotations
 
@@ -15,10 +15,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="ea",
         description="Compute Evasive Acceleration (EA), in m/s^2.",
-        epilog="Use 'ea single --help' or 'ea batch --help' for workflow options.",
+        epilog="Use 'ea single --help', 'ea batch --help', or 'ea benchmark --help'.",
     )
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("command", choices=("single", "batch"), nargs="?")
+    parser.add_argument("command", choices=("single", "batch", "benchmark"), nargs="?")
 
     # Delegate before parsing so each workflow owns its --help and options.
     if arguments and arguments[0] == "single":
@@ -37,6 +37,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 '  python -m pip install -e ".[batch]"\n',
             )
         return batch_main(arguments[1:]) or 0
+    if arguments and arguments[0] == "benchmark":
+        from .benchmark import main as benchmark_main
+
+        return benchmark_main(arguments[1:])
 
     parser.parse_args(arguments)
     parser.print_help()

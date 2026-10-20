@@ -1,9 +1,5 @@
 # Evasive Acceleration (EA)
 
-This independent v2 evaluation repository uses a paper-aligned finite-horizon
-core with fine-grid candidate verification. It does not replace or update the
-[original EA repository](https://github.com/AutoChengh/evasive-acceleration).
-
 Evasive Acceleration (EA) quantifies driving risk by measuring the difficulty
 of collision avoidance. Intuitively, EA finds the smallest two-dimensional
 relative acceleration needed to change the projected motion and avoid collision.
@@ -17,7 +13,11 @@ automated-driving safety.
 
 Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
-[Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Interactive notebook](#interactive-notebook) · [Python usage](#python-usage) · [Input conventions](#input-conventions)
+[Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Python usage](#python-usage) · [Input conventions](#input-conventions) · [Measure runtime](#measure-runtime)
+
+This is the independent v2 development and review repository. The
+[original EA repository](https://github.com/AutoChengh/evasive-acceleration)
+is unchanged.
 
 ## Visual overview
 
@@ -63,6 +63,7 @@ Start with the question you want to answer:
 | Understand what EA adds to TTC | [Equal-TTC comparison](docs/comparison_case.md) | Two synthetic states, full inputs, actual EA/TTC/DRAC results, a figure, and settings. |
 | Use a tracking table with your own column names | [Bring your own data](docs/bring_your_own_data.md) | A copyable DataFrame adapter with explicit units, coordinate conversion, and causal yaw-rate handling. |
 | Explore interactively | [EA quickstart notebook](notebooks/ea_quickstart.ipynb) | Recompute the comparison, convert custom data, inspect risk/yaw-rate histories, and adjust two manual controls. |
+| Check computation speed on your machine | [Runtime benchmark](docs/runtime.md) | Warmed four-pairing timing, every observation, and recorded inputs, settings, and environment. |
 
 After installing the visualization extras, reproduce the comparison with:
 
@@ -124,8 +125,8 @@ time. `python -m evasive_acceleration` accepts the same commands as `ea`.
 The `notebook` extra includes the interactive notebook and execution dependencies;
 it is not required for ordinary EA computation.
 
-This evaluation repository is initially private: Git cloning requires an
-authorized GitHub account. Use a separate virtual environment when comparing
+If repository access is restricted, Git cloning requires an authorized
+GitHub account. Use a separate virtual environment when comparing
 with the original version, because the Python distribution/import names remain
 `evasive-acceleration` / `evasive_acceleration`. This upload is not a PyPI release.
 
@@ -275,6 +276,7 @@ is missing; it need not reproduce those supplied observations.
 ```bash
 ea single --help
 ea batch --help
+ea benchmark --help
 ea batch --input path/to/case.csv
 ea batch --input-dir path/to/csvs --yaw-rate-source estimated
 ea batch --input path/to/case.csv --output-dir path/to/results
@@ -376,6 +378,25 @@ the smaller of `dt_coarse` and `dt_fine`.
 See the paper for evaluation protocols and comparisons, and
 [validation details](docs/validation.md) for source consistency and timing checks.
 
+## Measure runtime
+
+```bash
+ea benchmark
+ea benchmark --input examples/data/provided.csv --output-dir outputs/runtime_provided
+```
+
+The first command is a three-state synthetic smoke test. The second measures
+your selected input with the same four-pairing EA core. Both exclude warm-up
+and save every measured call, including slow observations, alongside settings
+and environment information. An existing output directory is never overwritten.
+
+A separate 857,820-frame, single-pass implementation check measured a mean of
+2.424 ms and P95 of 12.572 ms on the recorded Linux/Xeon/Numba setup. This is
+not a speed guarantee for another workload or machine; the complete result,
+including the observed tail and separately reported replays, is in the
+[runtime guide](docs/runtime.md). Minimal package installation is sufficient
+for the local benchmark; CSV processing and plotting extras are not required.
+
 ## Generate GIFs from a source checkout
 
 Install the `batch` and `viz` extras, compute batch results, then run:
@@ -422,6 +443,9 @@ installed imports, and batch input/output behavior. They also cover the
 comparison inputs and results, custom-data conversion, output protection, and
 figure typography. The vendored paper modules and historical baseline source
 are protected by normalized source hashes.
+
+Start with the [current validation guide](docs/validation.md). Earlier version
+checks remain available in the [validation history](docs/validation_history.md).
 
 ```bash
 python tools/check_core_integrity.py
