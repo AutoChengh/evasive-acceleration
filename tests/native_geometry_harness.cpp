@@ -1,6 +1,6 @@
 // Independent scalar check of the SIMD face-hint filter. Include in one
 // translation unit to exercise the actual private Pool implementation.
-#include "native_cells.cpp" // add the experimental source directory with -I
+#include "native_cells.cpp" // add the EA solver source directory with -I
 #include <iostream>
 #include <random>
 

@@ -61,7 +61,7 @@ def main(argv=None):
         if states.ndim != 2 or states.shape[1] != 14 or not len(states):
             parser.error("expected nonempty (N,14) states array")
         runtime, _library = _get_runtime()
-        from evasive_acceleration._experimental import continuous as independent
+        from evasive_acceleration._solver import continuous as independent
         kwargs = [ea.build_compute_kwargs(ea.RoadUserState(*s[:7]),
                                          ea.RoadUserState(*s[7:])) for s in states]
         failures, times, maximum_delta, certified = [], [], 0., 0

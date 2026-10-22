@@ -1,7 +1,7 @@
 # Interactive EA quickstart
 
-The notebook reuses the same public API, synthetic comparison, custom-data
-adapter, and EA core as the command-line examples. It is not a
+The notebook calls EA through the public API and reuses the synthetic comparison
+and custom-data adapter from the command-line examples. It is not a
 reproduction of the paper's statistical experiments.
 
 ## Local Jupyter

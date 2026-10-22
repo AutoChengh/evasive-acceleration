@@ -4,8 +4,9 @@ Run from a source checkout after installing ``.[viz]`` and building the native c
 
     python examples/comparison_case.py --output-dir outputs/comparison_case
 
-The public EA core and historical baseline functions are
-called with their defaults. These inputs are illustrations, not paper experiment data.
+EA is computed through the public API; the comparison metrics use the
+historical baseline functions. Both use their default numerical settings.
+These inputs are illustrations, not paper experiment data.
 """
 
 from __future__ import annotations

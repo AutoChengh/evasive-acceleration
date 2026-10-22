@@ -1,6 +1,6 @@
-"""Best-bound-first continuous rectangle certificate, with exact rejections.
+"""EA best-bound-first rectangle certificate with exact contact rejections.
 
-The SAME fixed-axis Taylor lower bounds cover the whole horizon. Traversal
+Fixed-axis Taylor lower bounds cover the whole horizon. Traversal
 prioritizes the interval with the lowest bound, so a grazing interval cannot
 starve a deeper collision elsewhere. Exhaustion is unresolved, never safe.
 """
@@ -12,6 +12,15 @@ from .continuous_compact_kernel import (
     sector_lower_bound,_refine_witness_time,_full_certify,
 )
 from .continuous_tail_kernel import acceleration_tail_start
+
+
+def solve_pair(state_values,pair,config=None,budget=None):
+    # Use the best-bound-first certificate for EA's separation-oracle restart
+    # as well, so contact refinement and acceptance share the same safety rules.
+    from . import continuous_penalty_fallback as fallback
+    from .._model.config import EAConfig
+    return fallback.solve_pair(state_values,pair,EAConfig()if config is None else config,
+        ContinuousBudget()if budget is None else budget)
 
 
 @njit(cache=True,fastmath=False)
@@ -64,24 +73,29 @@ def certify(state,wa,wb,ax,ay,horizon,guard=1e-10,max_nodes=30000):
     ra,rb=.5*math.hypot(state[4],state[5]),.5*math.hypot(state[11],state[12])
     trans_second=state[2]*abs(wa)+state[9]*abs(wb)+math.hypot(ax,ay)
     second=trans_second+ra*wa*wa+rb*wb*wb
-    best_gap=0.;best_time=np.nan;unresolved=np.nan;negative_started=0
+    best_gap=0.;best_score=0.;best_time=np.nan;unresolved=np.nan;negative_started=0
     for t in (0.,horizon):
         gap=separation(state,wa,wb,t,ax,ay)
         if gap< -guard:
-            best_gap,best_time=gap,t
-            if gap< -1e-3 or t==0.:return 0,t,1
+            if t==0.:return 0,t,1
+            score=2.*gap/(t*t)
+            if score<best_score:best_gap,best_score,best_time=gap,score,t
     capacity=min(8192,max(8,max_nodes+2))
     bounds,left,right=np.empty(capacity),np.empty(capacity),np.empty(capacity)
     lower,gap=_interval(state,wa,wb,ax,ay,0.,horizon,trans_second,second,ra+rb,guard)
     visited=1
-    if gap< -guard and gap<best_gap:best_gap,best_time=gap,.5*horizon
-    if gap< -1e-3:return 0,.5*horizon,visited
-    size=_push(bounds,left,right,0,lower,0.,horizon)
+    if gap< -guard:
+        score=8.*gap/(horizon*horizon)
+        if score<best_score:best_gap,best_score,best_time=gap,score,.5*horizon
+    size=0
+    if lower<=guard:size=_push(bounds,left,right,0,2.*min(lower,0.)/1e-24,0.,horizon)
     while size:
         bound,lo,hi,size=_pop(bounds,left,right,size)
-        if bound>guard:continue
         if math.isfinite(best_time):
-            if bound>=best_gap:continue
+            # Priority is an acceleration-normalized lower bound for possible
+            # NEGATIVE gaps in this interval. Approximate maximization affects
+            # only rejection-cut quality, never a safety acceptance.
+            if bound>=best_score-max(1e-6,.05*abs(best_score)):return 0,best_time,visited
             if not negative_started:negative_started=visited
             if visited-negative_started>=512:return 0,best_time,visited
         mid=.5*(lo+hi)
@@ -92,10 +106,12 @@ def certify(state,wa,wb,ax,ay,horizon,guard=1e-10,max_nodes=30000):
             return (0,best_time,visited)if math.isfinite(best_time)else(-1,mid,visited)
         for a,b in ((lo,mid),(mid,hi)):
             lower,gap=_interval(state,wa,wb,ax,ay,a,b,trans_second,second,ra+rb,guard);visited+=1
-            if gap< -guard and gap<best_gap:
-                best_gap,best_time=gap,.5*(a+b)
-                if gap< -1e-3:return 0,best_time,visited
-            if lower<=guard:size=_push(bounds,left,right,size,lower,a,b)
+            if gap< -guard:
+                t=.5*(a+b);score=2.*gap/(t*t)
+                if score<best_score:best_gap,best_score,best_time=gap,score,t
+            if lower<=guard:
+                key=2.*min(lower,0.)/max(a*a,1e-24)
+                size=_push(bounds,left,right,size,key,a,b)
     if math.isfinite(best_time):return 0,best_time,visited
     if math.isfinite(unresolved):return -1,unresolved,visited
     return 1,np.nan,visited

@@ -97,14 +97,14 @@ the configured numerical tolerance is `0.001 m/s²`.
 
 TTC describes the same projected contact time in both cases. The closing
 speeds and clearances differ, so restoring a collision-free relative motion
-can require different acceleration. The default EA solver evaluates all
+can require different acceleration. EA evaluates all
 relative acceleration directions; it is not restricted to longitudinal
 braking. In Case 2, its EA is therefore lower than longitudinal DRAC.
 
 The nominal trajectories for CTCT, CTCV, CVCT, and CVCV coincide here because
 both yaw rates are zero. All four use the same continuous-time numerical
-procedure and therefore agree for these inputs. The reported EA still uses
-the four-mode arithmetic mean; the example does not substitute a single branch.
+procedure and therefore agree for these inputs. As defined by EA, the reported
+score is the arithmetic mean of all four components.
 
 This does not prove that EA is universally better than TTC, define an
 empirical safety threshold, or establish the best response for a real driver.

@@ -1,4 +1,4 @@
-"""Check that EA kernels still match the independently tested source.
+"""Check that EA kernels match the reviewed EA source manifest.
 
 Normalize checkout line endings only. Never rewrite a source or refresh the
 baseline hashes automatically: a numerical change needs a new validation.
@@ -19,16 +19,16 @@ AUXILIARY_HASHES = {
 
 
 def check_solver_integrity(project_root: Path = PROJECT_ROOT) -> list[str]:
-    root = project_root / "src" / "evasive_acceleration" / "_experimental"
+    root = project_root / "src" / "evasive_acceleration" / "_solver"
     manifest = root / "ea_sources.json"
     if not manifest.is_file():
-        return ["Missing frozen EA source manifest"]
+        return ["Missing reviewed EA source manifest"]
     record = json.loads(manifest.read_text(encoding="utf-8"))
     failures = []
     if record.get("method") != "Evasive Acceleration (EA)":
         failures.append("The source manifest must identify the method as EA")
     if record.get("core_id") != "ea-continuous-certified-20261022":
-        failures.append("The EA source identity does not match the validated snapshot")
+        failures.append("The EA source identity does not match the reviewed manifest")
     for name, expected in record["sources"].items():
         path = root / name
         if path.parent != root or not path.is_file():
@@ -40,7 +40,7 @@ def check_solver_integrity(project_root: Path = PROJECT_ROOT) -> list[str]:
     actual_sources = {path.name for path in root.iterdir()
                       if path.suffix in (".py", ".cpp") and path.name != "__init__.py"}
     if actual_sources != set(record["sources"]):
-        failures.append("Only the frozen EA transitive source closure may be packaged")
+        failures.append("Only the reviewed EA transitive source closure may be packaged")
     # The public release changes routing, not the causal estimator or baselines.
     for relative, expected in AUXILIARY_HASHES.items():
         path = project_root / relative
@@ -58,7 +58,7 @@ def main() -> int:
     for failure in failures:
         print("[FAIL] " + failure)
     if not failures:
-        print("[OK] EA kernels, baseline metrics and causal yaw-rate sources match validated snapshots")
+        print("[OK] EA kernels, baseline metrics and causal yaw-rate sources match reviewed manifests")
     return int(bool(failures))
 
 

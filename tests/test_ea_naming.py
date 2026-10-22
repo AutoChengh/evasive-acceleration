@@ -27,6 +27,19 @@ IGNORED_PARTS = {
 }
 # A development identifier is not a semantic package release such as 0.3.0.
 DEVELOPMENT_IDENTIFIER = re.compile(r"(?<![a-z0-9])v[0-9]{2}(?![0-9])", re.IGNORECASE)
+# These phrases describe EA as a selectable research implementation. Numerical
+# candidate accelerations, internal recovery, and historical records are valid
+# concepts and must not be removed by a blanket keyword prohibition.
+NONCANONICAL_EA_DESCRIPTIONS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in (
+    r"\bopt[- ]in\s+continuous[- ]time\b",
+    r"\bEA\s+(?:research\s+)?candidate\b",
+    r"\bresearch\s+candidate\b",
+    r"\bexperimental\s+(?:EA|cell|solver|runtime)\b",
+    r"\b(?:alternative|second)\s+EA\s+implementation\b",
+))
+ALGORITHM_TEXT_DIRECTORIES = {
+    "src", "docs", "examples", "notebooks", "tools", "visualization",
+}
 
 
 def _published_paths():
@@ -54,8 +67,32 @@ def test_published_text_and_paths_use_ea_not_internal_development_identifiers():
     assert not failures, "\n".join(failures)
 
 
+def test_source_comments_docstrings_and_guides_describe_one_canonical_ea():
+    failures = []
+    for path in _published_paths():
+        relative = path.relative_to(ROOT)
+        if not path.is_file() or not (path.suffix.lower() in TEXT_SUFFIXES or
+                                      path.name in PUBLIC_ROOT_FILES):
+            continue
+        if relative.parts[0] not in ALGORITHM_TEXT_DIRECTORIES and path.name not in PUBLIC_ROOT_FILES:
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+            if any(pattern.search(line) for pattern in NONCANONICAL_EA_DESCRIPTIONS):
+                failures.append(f"Noncanonical EA description: {relative.as_posix()}:{number}")
+    assert not failures, "\n".join(failures)
+
+
+def test_packaged_private_paths_describe_solver_and_model_support():
+    package = ROOT / "src/evasive_acceleration"
+    assert (package / "_solver").is_dir()
+    assert (package / "_model" / "constants.py").is_file()
+    assert not (package / "_model" / "numerical_solver.py").exists()
+    assert not (package / "_experimental").exists()
+    assert not (package / "_paper").exists()
+
+
 def test_ea_is_the_only_packaged_source_manifest():
-    package = ROOT / "src/evasive_acceleration/_experimental"
+    package = ROOT / "src/evasive_acceleration/_solver"
     assert sorted(path.name for path in package.glob("*.json")) == ["ea_sources.json"]
     manifest = json.loads((package / "ea_sources.json").read_text(encoding="utf-8"))
     assert "version" not in manifest

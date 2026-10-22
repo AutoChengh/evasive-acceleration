@@ -1,4 +1,4 @@
-"""Compact constraint proposals; safety and global error checks are unchanged."""
+"""Compact EA constraint proposals governed by safety and global error checks."""
 import math
 from .continuous_tail_kernel import (
     njit, ContinuousResult, ContinuousBudget, solve_pair, certify, separation,

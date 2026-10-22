@@ -158,8 +158,8 @@ def test_repeat_count_and_input_hash_are_recorded(tmp_path, monkeypatch):
     result = json.loads((output / "benchmark_summary.json").read_text())
     assert result["unique_frames"] == 1 and result["calls"] == 2 and result["repeats"] == 2
     assert result["inputs"][0]["sha256"] == hashlib.sha256(before).hexdigest()
-    assert "_experimental/continuous_adaptive_cells.py" in result["source_sha256"]
-    assert "_experimental/native_cells.cpp" in result["source_sha256"]
+    assert "_solver/continuous_adaptive_cells.py" in result["source_sha256"]
+    assert "_solver/native_cells.cpp" in result["source_sha256"]
     assert path.read_bytes() == before
 
 

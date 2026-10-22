@@ -15,7 +15,8 @@ Paper: [Driving risk emerges from the required two-dimensional joint evasive acc
 
 [Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Python usage](#python-usage) · [Input conventions](#input-conventions) · [Measure runtime](#measure-runtime)
 
-Compute EA through the Python API, command line, or notebooks.
+This repository provides the official EA algorithm through the Python API,
+command line, and notebooks.
 Provide yaw rates directly, or estimate missing values from current and past
 headings. See [installation](#install-and-run) to prepare the native component
 once before use.
@@ -92,8 +93,8 @@ python -m notebook notebooks/ea_quickstart.ipynb
 ```
 
 Run the cells in order. Each execution writes a fresh run directory, without
-replacing inputs or earlier runs. The notebook uses the same API and example
-scripts, not a second implementation of EA. See the [notebook guide](notebooks/README.md)
+replacing inputs or earlier runs. The notebook computes EA through the public
+API and example scripts. See the [notebook guide](notebooks/README.md)
 for font setup, hosted notebook use after publication, and headless execution.
 
 ## Install and run
@@ -273,7 +274,7 @@ output deadband `0.002 rad/s`, and four output decimals. The internal state
 keeps full precision. These preprocessing settings and initialization behavior
 are documented in [docs/causal_yaw_rate.md](docs/causal_yaw_rate.md).
 
-Both supplied and estimated yaw rates feed the same numerical EA core.
+Both supplied and estimated yaw rates are inputs to the EA algorithm.
 Use the corresponding supplied yaw rates when reproducing an input experiment;
 re-estimating them changes the inputs. Historical paper reproduction is
 documented in the [source archive guide](docs/history.md).
@@ -369,9 +370,8 @@ estimated yaw rates.
 | Geometry size scale | 1.0 |
 
 Report numerical settings and yaw-rate preprocessing when reproducing an
-experiment. The score includes the four CV/CTRV pairings, not a separate
-nine-pairing CTRA extension. Older numerical implementations are retained only
-as [historical source archives](docs/history.md), not alternate runtime options.
+experiment. These four CV/CTRV pairings and their arithmetic mean define EA;
+the API, command line, batch pipeline, and notebooks all use this algorithm.
 See the paper for evaluation protocols and comparisons, and
 [validation details](docs/validation.md) for source consistency and timing checks.
 
@@ -442,8 +442,8 @@ comparison inputs and results, custom-data conversion, output protection, and
 figure typography. Numerical sources, historical baseline functions and the
 causal yaw-rate estimator are protected by source-integrity checks.
 
-Start with the [validation guide](docs/validation.md). Older implementations
-and their records are available through the [historical archives](docs/history.md).
+Start with the [validation guide](docs/validation.md). For auditing earlier
+research records, see the [historical source snapshots](docs/history.md).
 
 ```bash
 python tools/check_solver_integrity.py

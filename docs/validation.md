@@ -1,8 +1,8 @@
 # Validation and reproducibility
 
-All supported entry points use the same EA numerical core. This page describes
-current checks; older implementations are available only through the
-[historical archives](history.md).
+All entry points call the official EA algorithm. This page describes its
+numerical and interface checks. Earlier research records are retained in
+[historical source snapshots](history.md) for auditing only.
 
 ## Run the tests
 
@@ -16,7 +16,7 @@ python tools/check_wheel.py --wheel-dir outputs/package_check_dist
 ```
 
 Numba and the explicitly built native library are required. Missing native
-dependencies are errors, not a request to use another solver. See
+dependencies raise explicit errors. See
 [native setup](runtime.md#prepare-the-native-component).
 
 The suite checks:
@@ -75,8 +75,8 @@ source/input hashes and environment. Its no-input default is a synthetic
 three-state smoke test. The [runtime guide](runtime.md) defines the timer
 and reports the frozen 857,820-frame experiment separately.
 
-The output-free notebook calls the same API and example scripts, not an
-independent EA implementation. Keep executed notebooks and generated outputs
+The output-free notebook calls EA through the public API and example scripts.
+Keep executed notebooks and generated outputs
 outside the tracked source.
 
 GitHub Actions checks Linux/Windows, supported Python versions, native execution,

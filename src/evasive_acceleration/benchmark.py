@@ -172,8 +172,8 @@ def _environment():
 def _source_hashes():
     adapter = Path(core_ea.__file__).resolve()
     paths = {"core_ea.py": adapter, "benchmark.py": Path(__file__).resolve()}
-    paths.update({"_paper/" + path.name: path
-                  for path in (adapter.parent / "evasive_acceleration/_paper").glob("*.py")})
+    paths.update({"_model/" + path.name: path
+                  for path in (adapter.parent / "evasive_acceleration/_model").glob("*.py")})
     result = {name: sha256(path) for name, path in sorted(paths.items())}
     provenance = core_ea.get_core_provenance()
     result.update(provenance["runtime_source_sha256"])

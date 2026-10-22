@@ -1,8 +1,8 @@
-"""Tail-optimization kernels: same exclusion sets, less scratch work.
+"""EA tail-separation and witness-time refinement kernels.
 
-These are opt-in helpers; the frozen continuous v5 code is not edited.
-A local witness-time search only proposes exact constraints. Acceptance still
-requires the original continuous certificate and angular lower/upper gap.
+A local witness-time search only proposes exact constraints. EA accepts a
+result only after continuous-safety certification and closure of the angular
+lower/upper gap. These helpers are internal stages of the same EA calculation.
 """
 import math
 import numpy as np

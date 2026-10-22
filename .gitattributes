@@ -1,4 +1,4 @@
 # Use LF for EA solver sources and integrity records on every platform.
-src/evasive_acceleration/_experimental/*.py text eol=lf
-src/evasive_acceleration/_experimental/*.cpp text eol=lf
-src/evasive_acceleration/_experimental/*.json text eol=lf
+src/evasive_acceleration/_solver/*.py text eol=lf
+src/evasive_acceleration/_solver/*.cpp text eol=lf
+src/evasive_acceleration/_solver/*.json text eol=lf

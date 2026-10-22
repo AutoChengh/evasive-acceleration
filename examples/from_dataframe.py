@@ -1,7 +1,8 @@
-"""Adapt a long-form tracking table to the existing two-actor EA workflow.
+"""Adapt a long-form tracking table to the two-actor EA workflow.
 
 Run ``python examples/from_dataframe.py --help`` after installing ``.[batch]``.
-The conversion functions can also be imported by a notebook.
+The conversion functions can also be imported by a notebook. This module
+prepares inputs for EA; it does not define a separate risk algorithm.
 """
 
 from __future__ import annotations

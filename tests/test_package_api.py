@@ -74,13 +74,13 @@ def test_installed_package_imports_from_unrelated_directory(tmp_path):
 
 @pytest.mark.parametrize("turn_rate", [0.0, 0.08])
 def test_high_level_api_matches_compatible_keyword_solver(turn_rate):
-    from core_ea import compute_ea as legacy_compute_ea
+    from core_ea import compute_ea as keyword_compute_ea
     from evasive_acceleration import RoadUserState, build_compute_kwargs, compute_ea
 
     agent_a = RoadUserState(0.0, 0.0, 10.0, 0.0, 4.5, 1.8, turn_rate)
     agent_b = RoadUserState(20.0, 0.0, 8.0, 3.141592653589793, 4.7, 1.9, 0.0)
     options = {"T_total": 2.0}
-    expected = legacy_compute_ea(**build_compute_kwargs(agent_a, agent_b, **options))
+    expected = keyword_compute_ea(**build_compute_kwargs(agent_a, agent_b, **options))
 
     assert compute_ea(agent_a, agent_b, **options) == expected
 
@@ -103,7 +103,7 @@ def test_hidden_grid_options_remain_parseable_without_changing_continuous_ea(fla
 
     arguments = _build_argument_parser().parse_args(["--example", flag, text])
     assert getattr(arguments, attribute) == value
-    # Nonzero turning rates exercise the actual current solver, not merely
+    # Nonzero turning rates exercise EA's turning search, not merely
     # argument parsing or the zero-yaw equivalent-pair shortcut.
     a = RoadUserState(0., 0., 8., 0., 4.8, 1.8, .1)
     b = RoadUserState(20., 1., 4., 3.141592653589793, 4.5, 1.8, -.05)

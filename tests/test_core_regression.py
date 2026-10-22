@@ -24,12 +24,12 @@ MODE_KEYS = ("EA_CVCV", "EA_CVCT", "EA_CTCV", "EA_CTCT")
 CASES = json.loads((ROOT / "tests/fixtures/ea_interface_cases.json").read_text(encoding="utf-8"))["cases"]
 
 
-def test_validated_numerical_sources_and_auxiliary_algorithms_are_unchanged():
+def test_ea_sources_and_auxiliary_algorithms_match_reviewed_manifests():
     integrity = runpy.run_path(str(ROOT / "tools" / "check_solver_integrity.py"))
     assert integrity["check_solver_integrity"]() == []
 
 
-def test_new_ea_is_the_only_public_default_and_has_no_backend_selector():
+def test_ea_is_the_only_public_default_and_has_no_backend_selector():
     assert core_ea.CORE_ID == "ea-continuous-certified-20261022"
     assert core_ea.get_core_provenance()["backend"] == "EA"
     for name in ("get_backend", "use_backend", "BACKEND_NAMES"):
@@ -39,22 +39,29 @@ def test_new_ea_is_the_only_public_default_and_has_no_backend_selector():
 
 
 @pytest.mark.parametrize("name", ["calculator", "verified_calculator", "verified_solver", "motion"])
-def test_archived_reference_solver_modules_are_not_installable(name):
-    assert not (Path(ea.__file__).resolve().parent / "_paper" / (name + ".py")).exists()
+def test_model_support_does_not_install_alternative_solvers(name):
+    assert not (Path(ea.__file__).resolve().parent / "_model" / (name + ".py")).exists()
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("evasive_acceleration._paper." + name)
+        importlib.import_module("evasive_acceleration._model." + name)
 
 
-def test_compatibility_shims_do_not_expose_the_archived_solver():
-    from evasive_acceleration._paper import numerical_solver
-    assert not hasattr(numerical_solver, "solve_pair")
-    assert not hasattr(numerical_solver, "compute_ea")
-    assert not hasattr(numerical_solver, "find_min_acceleration")
-    assert set(name for name in vars(numerical_solver) if not name.startswith("_")) == {
+def test_model_constants_do_not_expose_a_separate_solver():
+    from evasive_acceleration._model import constants
+    assert not hasattr(constants, "solve_pair")
+    assert not hasattr(constants, "compute_ea")
+    assert not hasattr(constants, "find_min_acceleration")
+    assert set(name for name in vars(constants) if not name.startswith("_")) == {
         "njit", "DEFAULT_DT_COARSE", "DEFAULT_DT_FINE", "DEFAULT_A_MAX", "DEFAULT_TOL",
         "DEFAULT_COARSE_SECTOR_NUM", "DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG",
         "DEFAULT_LOCAL_FINE_DIR_NUM", "DEFAULT_FINE_REFINE_RATIO",
     }
+
+
+@pytest.mark.parametrize("namespace", ["_experimental", "_paper"])
+def test_only_canonical_private_solver_and_model_namespaces_are_installed(namespace):
+    assert not (Path(ea.__file__).resolve().parent / namespace).exists()
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("evasive_acceleration." + namespace)
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["id"] for case in CASES])

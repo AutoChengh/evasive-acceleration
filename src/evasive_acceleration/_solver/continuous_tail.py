@@ -1,16 +1,17 @@
-"""Retained angular lower bounds plus continuous separation-oracle cuts.
+"""EA angular-frontier refinement with continuous separation-oracle cuts.
 
-Bounds on the unchanged continuous problem remain valid after adding exact
+Bounds on the continuous EA problem remain valid after adding exact
 time constraints. Keep the angular frontier instead of restarting a global
 sampled optimization after every contact. CV-CV uses the analytic continuous
 affine-cell primitive; all reported finite values require swept certification.
+The refinement and its fallback are internal stages of the same EA calculation.
 """
 from dataclasses import dataclass
 import math
 import numpy as np
 from . import continuous_tail_kernel as base, continuous_cells as cells
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 
 njit = base.njit
 
@@ -194,7 +195,7 @@ def solve_pair(state_values, pair, config=EAConfig(), budget=RetainedBudget()):
     if any(state[i] <= 0. for i in (4, 5, 11, 12)):
         raise ValueError("Both road users must have positive length and width")
     if len(pair) != 2 or any(int(mode) not in (0, 1) for mode in pair):
-        raise ValueError("The continuous EA candidate supports CV and CTRV pairings only")
+        raise ValueError("EA supports CV and CTRV motion-model pairings only")
     if not (0. < config.prediction_horizon_s < math.inf and 0. <= config.max_extra_acceleration_mps2 < math.inf):
         raise ValueError("Require a positive finite horizon and nonnegative finite acceleration cap")
     state[2], state[9] = max(0., state[2]), max(0., state[9])
@@ -254,7 +255,7 @@ def compute_selected_modes_with_diagnostics(state_values, config=EAConfig(), pai
     result, cache = {}, {}
     for pair in pairs:
         if len(pair) != 2 or any(int(mode) not in (0, 1) for mode in pair):
-            raise ValueError("The continuous EA candidate supports CV and CTRV pairings only")
+            raise ValueError("EA supports CV and CTRV motion-model pairings only")
         wa, wb = float(state_values[6]) if int(pair[0]) else 0., float(state_values[13]) if int(pair[1]) else 0.
         key = (0. if abs(wa) < 1e-6 else wa, 0. if abs(wb) < 1e-6 else wb)
         if key not in cache: cache[key] = solve_pair(state_values, pair, config, budget)
@@ -267,5 +268,5 @@ def compute_selected_modes(state_values, config=EAConfig(), pairs=FOUR_PAIRS, bu
     if any(not (r.continuous_verified and r.angular_converged)
            and r.status not in ("certified-cap-infeasible", "current-contact-or-uncertainty")
            for r in result.values()):
-        raise RuntimeError("Retained continuous search unresolved; inspect diagnostics")
+        raise RuntimeError("EA angular refinement unresolved; inspect diagnostics")
     return {pair: r.value for pair, r in result.items()}

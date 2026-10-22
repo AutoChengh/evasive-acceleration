@@ -39,7 +39,7 @@ DEFAULT_LOCAL_FINE_DIR_NUM = 101
 DEFAULT_FINE_REFINE_RATIO = 1.15
 CORE_ID = "ea-continuous-certified-20261022"
 
-# The paper aggregates in CV-first arithmetic order, before CSV rounding.
+# EA aggregates in CV-first arithmetic order, before CSV rounding.
 _MODE_KEYS = ("EA_CVCV", "EA_CVCT", "EA_CTCV", "EA_CTCT")
 
 
@@ -68,9 +68,9 @@ def _get_bridge():
     # Lazy imports avoid the core_ea -> package -> single_frame import cycle.
     from evasive_acceleration.runtime import _get_runtime, compute_modes as compute_selected_modes
 
-    # Check setup before importing the frozen configuration's decorator shim.
+    # Check setup before importing EA configuration and shared JIT constants.
     _get_runtime()
-    from evasive_acceleration._paper.config import EAConfig, MotionModel
+    from evasive_acceleration._model.config import EAConfig, MotionModel
 
     return EAConfig, MotionModel, compute_selected_modes
 
@@ -264,10 +264,10 @@ def compute_ea_modes(
     dt_fine: float = DEFAULT_DT_FINE,
     size_scale: float = 1.0,
 ) -> dict[str, float]:
-    """Return raw EA_CTCT/CTCV/CVCT/CVCV; CT is the legacy name for CTRV.
+    """Return EA's four raw CV/CTRV components; CT abbreviates CTRV in keys.
 
-    size_scale multiplies both users' OBB length and width. Only the four
-    original CV/CTRV hypotheses are evaluated, not the CTRA research extension.
+    size_scale multiplies both users' OBB length and width. The unrounded
+    arithmetic mean of these four ordered motion hypotheses is the EA score.
     """
     prepared = _prepare_inputs(
         (xA, yA, vA, hA, xB, yB, vB, hB, lA, wA, lB, wB, yawA, yawB),

@@ -1,5 +1,5 @@
-// Opt-in convex-cell search. Safety/planes are supplied by the frozen Numba
-// predicates through C ABI callbacks. Build WITHOUT fast-math or FMA contraction.
+// EA convex-cell search. Continuous-safety predicates and separating planes
+// are supplied through C ABI callbacks. Build WITHOUT fast-math or FMA contraction.
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -214,7 +214,7 @@ void solve_native(double*s,double wa,double wb,double horizon,double cap,double 
         // A context lives for ONE current-input four-mode call only. A
         // mismatch disables hints; no different state's answer can be read.
         if(seeds&&!seeds->matches(s,horizon,cap,tolerance,guard))seeds=nullptr;
-        // Do not pay for old hints when the nominal models differ strongly.
+        // Do not inspect stored hints when the nominal models differ strongly.
         // This only selects a proposal strategy, not a different EA problem.
         const double model_change=seeds&&seeds->has_pair?std::max(std::abs(wa-seeds->wa),std::abs(wb-seeds->wb)):0.;
         const bool very_close=model_change*horizon<=.01;

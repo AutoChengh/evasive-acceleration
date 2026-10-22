@@ -1,6 +1,6 @@
 # Runnable examples
 
-The examples use the same EA core and public interfaces as ordinary computation.
+The examples compute EA through the public interfaces.
 Start with:
 
 - [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC

@@ -14,8 +14,8 @@ CHECKER = runpy.run_path(str(ROOT / "tools/check_solver_integrity.py"))
 
 @pytest.mark.parametrize("alteration", ["kernel", "yaw_rate", "baseline", "extra_source", "missing_source"])
 def test_integrity_gate_detects_changes_without_refreshing_manifest(tmp_path, alteration):
-    snapshot = ROOT / "src/evasive_acceleration/_experimental"
-    destination = tmp_path / "src/evasive_acceleration/_experimental"
+    snapshot = ROOT / "src/evasive_acceleration/_solver"
+    destination = tmp_path / "src/evasive_acceleration/_solver"
     record = json.loads((snapshot / "ea_sources.json").read_text(encoding="utf-8"))
     destination.mkdir(parents=True)
     for name in ["ea_sources.json", *record["sources"]]:

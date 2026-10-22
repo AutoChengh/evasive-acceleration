@@ -1,7 +1,4 @@
-"""Ordered motion-pair constants required by the unchanged EA kernels.
-
-There is no solver entry point in this compatibility module.
-"""
+"""The four ordered motion-model hypotheses aggregated into the EA score."""
 from .config import MotionModel
 
 FOUR_PAIRS = (

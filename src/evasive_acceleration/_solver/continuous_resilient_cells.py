@@ -1,10 +1,11 @@
-"""Disjunctive convex-cell B&B in 2-D acceleration space.
+"""EA convex-cell refinement with certified angular completion.
 
 At a real collision time every feasible acceleration must escape one of the
 eight SAT halfplanes. Partition the current convex cell into those escape
-pieces and keep their exact min-norm bounds. This replaces repeated global
-angle restarts and full polygon-union reconstruction. No unresolved scalar is
-accepted; upper proposals still need full continuous certification.
+pieces and keep their exact min-norm bounds. The frontier carries these bounds
+through successive contact constraints. No unresolved scalar is accepted;
+upper proposals still need full continuous certification. Internal
+reference/fallback labels denote EA angular refinement, not another algorithm.
 """
 from dataclasses import dataclass
 import math
@@ -13,8 +14,8 @@ from . import continuous as motion,priority_safety as safety
 from . import penalty_safety as initial_safety,continuous_compact_kernel as proposal_safety
 from .circle_proposal import inside_polygon,propose as circle_proposal
 from .continuous_compact_kernel import _refine_witness_time
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 njit=motion.njit
 
 

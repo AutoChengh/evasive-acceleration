@@ -1,8 +1,8 @@
 # EA setup and runtime
 
-The Python API, command line and notebook use one EA implementation. It
-computes all four CV/CTRV pairings and their arithmetic mean, with
+EA computes all four CV/CTRV pairings and their arithmetic mean, with
 continuous-time collision verification and globally bounded numerical search.
+The Python API, command line and notebook all call this algorithm.
 
 ## Prepare the native component
 
@@ -26,7 +26,7 @@ location, use `--output` with a fresh path and set `EA_NATIVE_CELLS_LIBRARY`
 to the resulting library when running EA. See
 `python -m evasive_acceleration.native_build --help` for platform options.
 
-An EA call never launches a compiler or silently substitutes another solver.
+An EA call never launches a compiler or substitutes a different algorithm.
 Missing dependencies fail explicitly. The first calls can still JIT-compile
 Numba functions; benchmark only after warming the needed input paths on the
 same CPU.
@@ -117,10 +117,11 @@ disabled FMA contraction. No slow observation was removed or replaced by a
 faster replay. Nine raw-input frames retained `inf` results; corrected inputs
 were checked separately and did not replace primary observations.
 
-All finite results were within 0.000949699 m/s² of the independently frozen
-continuous-search reference. That reference is not the historical paper grid
-estimator. New and archived numerical implementations need not produce
-identical values. See [historical reproduction](history.md).
+All finite results were within 0.000949699 m/s² of an independently frozen
+continuous-search reference used to check the EA computation. This check is
+separate from reproducing historical grid-based research estimates, which
+need not equal current outputs frame by frame. See
+[historical research records](history.md).
 
 The acceptance suite also included 1,160 expanded cases, 24,792 numerical,
 continuous-time safety, global-bound and geometric-invariance checks. The
@@ -137,9 +138,11 @@ real-time guarantee.
 
 ## Source provenance
 
-The integrated numerical sources are the validated dependency closure frozen
-on 2026-10-22. Raw datasets, failed alternatives and compiled libraries are
-not bundled. Frozen source snapshot SHA256:
+EA's numerical operations are validated against the source archive frozen on
+2026-10-22. Current file hashes are recorded in the packaged `ea_sources.json`
+manifest and run provenance; comments and private package organization need
+not be byte-identical to that archive. Raw datasets and compiled libraries are
+not bundled. Validation archive SHA256:
 
 ```text
 37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15

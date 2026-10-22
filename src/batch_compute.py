@@ -47,7 +47,7 @@ OUTPUT_SUFFIX = "EA"
 ROUND_DECIMALS = 4
 EA_COLUMNS = ("EA_CTCT", "EA_CTCV", "EA_CVCT", "EA_CVCV", "EA")
 
-# Use the same finite-horizon paper defaults as the single-frame API.
+# Use the same finite-horizon EA defaults as the single-frame API.
 SOLVER_DEFAULTS = {
     "coarse_sector_num": DEFAULT_COARSE_SECTOR_NUM,
     "local_fine_half_window_deg": DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG,
@@ -321,8 +321,8 @@ def process_one_csv(
 ) -> dict:
     """Read, validate, prepare yaw rate, compute EA, and save CSV plus run metadata.
 
-    One file represents a continuous pair, in chronological order. Callers that
-    need the old input contract should explicitly use yaw_rate_source='provided'.
+    One file represents a continuous pair, in chronological order. Use
+    yaw_rate_source='provided' to use only the yaw rates supplied in the CSV.
     """
     started = time.perf_counter()
     input_path = Path(csv_path).resolve()
@@ -337,7 +337,7 @@ def process_one_csv(
             f"Result already exists: {existing[0]}. Choose --output-dir or explicitly use --overwrite."
         )
 
-    # Optional engine setup is a run-level failure, not one solver error/NaN
+    # Required EA runtime setup is a run-level failure, not one error/NaN
     # per row. Capture the active runtime before the measured frame loop and
     # before creating any output; the causal yaw-rate processing is unchanged.
     _preflight_runtime()

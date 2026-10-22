@@ -2,7 +2,7 @@
 import math
 import numpy as np
 
-from evasive_acceleration._experimental import continuous as c
+from evasive_acceleration._solver import continuous as c
 
 
 def test_taylor_certificate_detects_contact_between_grid_points():
@@ -42,7 +42,7 @@ def test_reported_bound_includes_sectors_pruned_earlier():
     # A global bound cannot be replaced by the next active node after the
     # winning region has already been pruned within the requested tolerance.
     state = np.array([0., 0., 8., 0., 4.8, 2., .1, 12., -5., 5., 1.5, 4., 2., -.2])
-    from evasive_acceleration._paper.four_modes import FOUR_PAIRS
+    from evasive_acceleration._model.four_modes import FOUR_PAIRS
     result = c.solve_pair(state, FOUR_PAIRS[3])
     assert result.continuous_verified
     assert result.lower_bound <= result.value
