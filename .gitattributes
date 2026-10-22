@@ -1,0 +1,4 @@
+# Keep the validated kernel snapshot byte-stable on Windows and Linux.
+src/evasive_acceleration/_experimental/*.py text eol=lf
+src/evasive_acceleration/_experimental/*.cpp text eol=lf
+src/evasive_acceleration/_experimental/*.json text eol=lf

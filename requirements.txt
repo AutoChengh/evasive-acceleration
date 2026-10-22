@@ -1,3 +1,3 @@
 # Install this checkout with the dependencies used by the CSV and GIF examples.
 # For the single-frame API only: python -m pip install -e .
--e .[batch,viz,fast]
+-e .[batch,viz]

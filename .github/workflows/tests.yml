@@ -1,0 +1,98 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MPLBACKEND: Agg
+  # Publication figures use Arial; hosted Linux runners allow a CI fallback.
+  EA_ALLOW_FONT_FALLBACK: "1"
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }} / EA
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Prepare Windows GCC-compatible compiler
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+          update: false
+      - name: Add Windows compiler to PATH
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: cygpath -w /ucrt64/bin >> "$GITHUB_PATH"
+      - name: Install EA and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,batch,viz]"
+          python -m pip check
+      - name: Verify unchanged numerical sources and yaw-rate estimator
+        run: |
+          python tools/check_solver_integrity.py
+      - name: Build native library before numerical tests or timing
+        run: python -m evasive_acceleration.native_build
+      - name: Run complete API, history, geometry and native regression suite
+        run: python -m pytest -q
+      - name: Run public examples and timing smoke test
+        run: |
+          ea --version
+          python examples/provided_state.py
+          python examples/from_history.py
+          ea single
+          ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
+          python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
+          ea benchmark --max-frames 1 --output-dir outputs/ci_benchmark
+      - name: Build and test source and wheel distributions in isolation
+        run: |
+          python -m build --outdir outputs/ci_dist
+          python tools/check_wheel.py --wheel-dir outputs/ci_dist
+
+  notebook:
+    name: Execute quickstart notebook
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install notebook dependencies and kernel
+        run: python -m pip install -e ".[batch,viz,notebook]"
+      - name: Build EA native library before executing examples
+        run: python -m evasive_acceleration.native_build
+      - name: Execute every quickstart cell
+        run: python tools/execute_quickstart.py --output outputs/notebooks/ea_quickstart.executed.ipynb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: executed-quickstart
+          path: outputs/notebooks/
+          if-no-files-found: error

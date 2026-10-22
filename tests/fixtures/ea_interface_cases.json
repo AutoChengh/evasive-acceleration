@@ -1,0 +1,237 @@
+{
+  "description": "Synthetic interface and geometry cases. Historical grid-estimator scores are deliberately not used as current EA ground truth.",
+  "units": "m, s, rad, m/s, rad/s; EA in m/s^2",
+  "state_order": [
+    "x",
+    "y",
+    "speed",
+    "heading",
+    "length",
+    "width",
+    "yaw_rate"
+  ],
+  "cases": [
+    {
+      "id": "head_on",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "agent_b": [
+        20,
+        0,
+        8,
+        3.141592653589793,
+        4.7,
+        1.9,
+        0
+      ],
+      "settings": {},
+      "expected_class": "positive"
+    },
+    {
+      "id": "turning_both",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0.08
+      ],
+      "agent_b": [
+        20,
+        0,
+        8,
+        3.141592653589793,
+        4.7,
+        1.9,
+        -0.04
+      ],
+      "settings": {},
+      "expected_class": "positive"
+    },
+    {
+      "id": "parallel_separated",
+      "agent_a": [
+        0,
+        0,
+        5,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "agent_b": [
+        0,
+        100,
+        5,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "settings": {},
+      "expected_class": "zero"
+    },
+    {
+      "id": "current_contact",
+      "agent_a": [
+        0,
+        0,
+        5,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "agent_b": [
+        4.5,
+        0,
+        5,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "settings": {},
+      "expected_class": "infinite"
+    },
+    {
+      "id": "no_feasible_direction",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "agent_b": [
+        20,
+        0,
+        8,
+        3.141592653589793,
+        4.7,
+        1.9,
+        0
+      ],
+      "settings": {
+        "a_max": 0.01
+      },
+      "expected_class": "infinite"
+    },
+    {
+      "id": "outside_horizon",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "agent_b": [
+        100,
+        0,
+        9,
+        0,
+        4.5,
+        1.8,
+        0
+      ],
+      "settings": {},
+      "expected_class": "zero"
+    },
+    {
+      "id": "fine_only_contact",
+      "agent_a": [
+        0,
+        0,
+        0,
+        0,
+        0.05,
+        0.05,
+        0
+      ],
+      "agent_b": [
+        -0.4,
+        0,
+        10,
+        0,
+        0.05,
+        0.05,
+        0
+      ],
+      "settings": {
+        "T_total": 0.2
+      },
+      "expected_class": "positive"
+    },
+    {
+      "id": "custom_grid_turning",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0.08
+      ],
+      "agent_b": [
+        20,
+        0,
+        8,
+        3.141592653589793,
+        4.7,
+        1.9,
+        -0.04
+      ],
+      "settings": {
+        "T_total": 3,
+        "dt_coarse": 0.2,
+        "dt_fine": 0.04,
+        "coarse_sector_num": 36,
+        "local_fine_dir_num": 51,
+        "local_fine_half_window_deg": 7,
+        "fine_refine_ratio": 1.2,
+        "tol": 0.0005
+      },
+      "expected_class": "positive"
+    },
+    {
+      "id": "scaled_vehicle_geometry",
+      "agent_a": [
+        0,
+        0,
+        10,
+        0,
+        4.5,
+        1.8,
+        0.08
+      ],
+      "agent_b": [
+        20,
+        0,
+        8,
+        3.141592653589793,
+        4.7,
+        1.9,
+        -0.04
+      ],
+      "settings": {
+        "size_scale": 0.9
+      },
+      "expected_class": "positive"
+    }
+  ]
+}

@@ -114,7 +114,7 @@ results require `--overwrite`. See the [README](../README.md#reading-the-results
 for output meanings and [from_history.py](../examples/from_history.py) for a
 complete two-agent example.
 
-## Interpretation and limitations
+## Input conventions and filtering behavior
 
 Inputs are radians and seconds. Positive yaw rate means increasing heading
 counterclockwise from the positive x axis in a Cartesian frame. Body yaw is not

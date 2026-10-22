@@ -7,7 +7,7 @@ This module is intended for real-time or instant-evaluation use cases, where
 the user wants to input the current instantaneous states of two road users and
 obtain the EA value for that single frame immediately.
 
-It reuses the existing solver implemented in ``core_ea.py`` and provides:
+It uses continuous-time EA through ``core_ea.py`` and provides:
     - a clean dataclass-based state interface;
     - basic input validation;
     - a minimal command-line interface;
@@ -142,6 +142,8 @@ class RoadUserState:
 
         if self.length <= 0.0 or self.width <= 0.0:
             raise ValueError("length and width must be strictly positive.")
+        if self.speed < 0.0:
+            raise ValueError("speed is a magnitude and must be non-negative.")
 
     def as_tuple(self) -> Tuple[float, float, float, float, float, float, float]:
         """Return the state as a 7-tuple."""
@@ -206,6 +208,8 @@ class RoadUserKinematicState:
             raise ValueError("All kinematic state values must be finite real numbers.")
         if self.length <= 0.0 or self.width <= 0.0:
             raise ValueError("length and width must be strictly positive.")
+        if self.speed < 0.0:
+            raise ValueError("speed is a magnitude and must be non-negative.")
 
 
 def build_state_with_estimated_yaw_rate(
@@ -275,8 +279,19 @@ def _validate_solver_config(
     a_max: float,
     tol: float,
     size_scale: float,
+    local_fine_half_window_deg: float,
+    fine_refine_ratio: float,
 ) -> None:
     """Validate numerical solver settings."""
+    settings = {
+        "dt_coarse": dt_coarse, "dt_fine": dt_fine, "T_total": T_total,
+        "a_max": a_max, "tol": tol, "size_scale": size_scale,
+        "local_fine_half_window_deg": local_fine_half_window_deg,
+        "fine_refine_ratio": fine_refine_ratio,
+    }
+    for name, value in settings.items():
+        if not math.isfinite(float(value)):
+            raise ValueError(f"{name} must be finite.")
     if coarse_sector_num < 4:
         raise ValueError("coarse_sector_num must be at least 4.")
     if local_fine_dir_num < 3:
@@ -291,6 +306,10 @@ def _validate_solver_config(
         raise ValueError("tol must be strictly positive.")
     if size_scale <= 0.0:
         raise ValueError("size_scale must be strictly positive.")
+    if not 0.0 <= local_fine_half_window_deg <= 180.0:
+        raise ValueError("local_fine_half_window_deg must be between 0 and 180.")
+    if fine_refine_ratio <= 0.0:
+        raise ValueError("fine_refine_ratio must be strictly positive.")
 
 
 # ============================================================================
@@ -326,6 +345,8 @@ def build_compute_kwargs(
         a_max=float(a_max),
         tol=float(tol),
         size_scale=float(size_scale),
+        local_fine_half_window_deg=float(local_fine_half_window_deg),
+        fine_refine_ratio=float(fine_refine_ratio),
     )
 
     return {
@@ -496,15 +517,16 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         help="State of agent B: x y speed heading length width yaw_rate",
     )
 
-    parser.add_argument("--coarse-sector-num", type=int, default=DEFAULT_COARSE_SECTOR_NUM)
-    parser.add_argument("--local-fine-half-window-deg", type=float, default=DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG)
-    parser.add_argument("--local-fine-dir-num", type=int, default=DEFAULT_LOCAL_FINE_DIR_NUM)
-    parser.add_argument("--fine-refine-ratio", type=float, default=DEFAULT_FINE_REFINE_RATIO)
+    # Accepted only for call compatibility; these do not control EA accuracy.
+    parser.add_argument("--coarse-sector-num", type=int, default=DEFAULT_COARSE_SECTOR_NUM, help=argparse.SUPPRESS)
+    parser.add_argument("--local-fine-half-window-deg", type=float, default=DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG, help=argparse.SUPPRESS)
+    parser.add_argument("--local-fine-dir-num", type=int, default=DEFAULT_LOCAL_FINE_DIR_NUM, help=argparse.SUPPRESS)
+    parser.add_argument("--fine-refine-ratio", type=float, default=DEFAULT_FINE_REFINE_RATIO, help=argparse.SUPPRESS)
     parser.add_argument("--a-max", type=float, default=DEFAULT_A_MAX)
     parser.add_argument("--tol", type=float, default=DEFAULT_TOL)
     parser.add_argument("--T-total", type=float, default=DEFAULT_T_TOTAL)
-    parser.add_argument("--dt-coarse", type=float, default=DEFAULT_DT_COARSE)
-    parser.add_argument("--dt-fine", type=float, default=DEFAULT_DT_FINE)
+    parser.add_argument("--dt-coarse", type=float, default=DEFAULT_DT_COARSE, help=argparse.SUPPRESS)
+    parser.add_argument("--dt-fine", type=float, default=DEFAULT_DT_FINE, help=argparse.SUPPRESS)
     parser.add_argument("--size-scale", type=float, default=1.0)
 
     parser.add_argument(

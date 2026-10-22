@@ -1,7 +1,7 @@
 """Public EA API with state containers and causal yaw-rate estimation.
 
 ``compute_ea(agent_a, agent_b)`` accepts two :class:`RoadUserState` objects.
-The original keyword-based solver remains available in ``core_ea``.
+The compatible keyword-based interface remains available in ``core_ea``.
 CSV dependencies are loaded only when the batch command is used.
 """
 
@@ -24,8 +24,7 @@ from yaw_rate import (
     causal_yawrate,
     wrap_angle_difference,
 )
-
-__version__ = "0.2.0.dev0"
+__version__ = "0.3.0"
 
 # One high-level entry point; these names refer to the existing implementation.
 compute_ea = compute_single_frame_ea

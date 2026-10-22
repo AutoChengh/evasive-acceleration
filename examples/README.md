@@ -1,9 +1,29 @@
 # Runnable examples
 
+The examples use the same EA core and public interfaces as ordinary computation.
+Start with:
+
+- [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC
+  states with different EA, and export full inputs, results, settings, and a
+  Fig. 1-styled PNG. See [the comparison explanation](../docs/comparison_case.md).
+- [from_dataframe.py](from_dataframe.py): map a custom long-form tracking table
+  into the existing pairwise batch pipeline. See
+  [the data-adaptation guide](../docs/bring_your_own_data.md).
+- [Interactive notebook](../notebooks/ea_quickstart.ipynb): run both workflows,
+  inspect causal yaw-rate provenance, and change an interaction manually.
+
+New figures require regular Arial; see [font and color setup](../docs/figure_style.md).
+For a labelled preview on a host without Arial, explicitly use
+`python examples/comparison_case.py --allow-font-fallback` or set
+`EA_ALLOW_FONT_FALLBACK=1`. The actual font and substitution are recorded in the
+run JSON. Without either opt-in, Arial remains required; publication exports
+must not use preview fallback.
+
 Install from the repository root:
 
 ```bash
-python -m pip install -e ".[batch,fast]"
+python -m pip install -e ".[batch]"
+python -m evasive_acceleration.native_build
 python examples/provided_state.py
 python examples/from_history.py
 ea batch --input examples/data/provided.csv --yaw-rate-source provided
@@ -11,7 +31,7 @@ ea batch --input examples/data/without_yaw_rate.csv
 ea batch --input examples/data/mixed_yaw_rate.csv
 ```
 
-The first Python example prints `EA = 4.828 m/s^2`. The history example prints
+The first Python example prints `EA = 4.911 m/s^2`. The history example prints
 the estimated yaw rates and initialization diagnostics before EA. Imports use
 the installed public package, so both scripts can be copied elsewhere.
 

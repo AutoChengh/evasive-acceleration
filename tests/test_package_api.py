@@ -10,6 +10,16 @@ from pathlib import Path
 import pytest
 
 
+LEGACY_GRID_OPTIONS = (
+    ("--coarse-sector-num", "coarse_sector_num", "36", 36),
+    ("--local-fine-half-window-deg", "local_fine_half_window_deg", "7.5", 7.5),
+    ("--local-fine-dir-num", "local_fine_dir_num", "51", 51),
+    ("--fine-refine-ratio", "fine_refine_ratio", "1.2", 1.2),
+    ("--dt-coarse", "dt_coarse", "0.4", .4),
+    ("--dt-fine", "dt_fine", "0.06", .06),
+)
+
+
 def test_editable_path_file_is_safe_for_non_ascii_windows_checkout():
     from importlib.metadata import distribution
 
@@ -63,7 +73,7 @@ def test_installed_package_imports_from_unrelated_directory(tmp_path):
 
 
 @pytest.mark.parametrize("turn_rate", [0.0, 0.08])
-def test_high_level_api_matches_unchanged_keyword_solver(turn_rate):
+def test_high_level_api_matches_compatible_keyword_solver(turn_rate):
     from core_ea import compute_ea as legacy_compute_ea
     from evasive_acceleration import RoadUserState, build_compute_kwargs, compute_ea
 
@@ -82,6 +92,32 @@ def test_installed_module_cli_forwards_single_help(tmp_path):
     assert result.returncode == 0, result.stderr
     assert "--agent-a" in result.stdout
     assert "--agent-b" in result.stdout
+    for flag, _attribute, _text, _value in LEGACY_GRID_OPTIONS:
+        assert flag not in result.stdout, "legacy compatibility options must not be advertised as EA controls"
+
+
+@pytest.mark.parametrize("flag,attribute,text,value", LEGACY_GRID_OPTIONS)
+def test_hidden_grid_options_remain_parseable_without_changing_continuous_ea(flag, attribute, text, value):
+    from single_frame import _build_argument_parser
+    from evasive_acceleration import RoadUserState, compute_ea
+
+    arguments = _build_argument_parser().parse_args(["--example", flag, text])
+    assert getattr(arguments, attribute) == value
+    # Nonzero turning rates exercise the actual current solver, not merely
+    # argument parsing or the zero-yaw equivalent-pair shortcut.
+    a = RoadUserState(0., 0., 8., 0., 4.8, 1.8, .1)
+    b = RoadUserState(20., 1., 4., 3.141592653589793, 4.5, 1.8, -.05)
+    assert compute_ea(a, b, **{attribute: value}) == compute_ea(a, b)
+
+
+def test_installed_single_accepts_all_six_hidden_compatibility_flags(tmp_path):
+    arguments = [item for flag, _attribute, text, _value in LEGACY_GRID_OPTIONS for item in (flag, text)]
+    default = _run_installed("-m", "evasive_acceleration", "single", "--example", cwd=tmp_path)
+    compatible = _run_installed("-m", "evasive_acceleration", "single", "--example", *arguments, cwd=tmp_path)
+    assert default.returncode == compatible.returncode == 0, default.stderr + compatible.stderr
+    default_score = next(line for line in default.stdout.splitlines() if line.startswith("EA ="))
+    compatible_score = next(line for line in compatible.stdout.splitlines() if line.startswith("EA ="))
+    assert compatible_score == default_score
 
 
 def test_installed_module_cli_reports_version(tmp_path):

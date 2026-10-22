@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import csv
+import hashlib
 from importlib.metadata import PackageNotFoundError, version
 import json
 import math
@@ -21,14 +22,16 @@ import pandas as pd
 
 from baseline_risk_metrics import ANALYTICAL_OUTPUT_COLUMNS, compute_real_time_metrics
 from core_ea import (
+    CORE_ID,
     DEFAULT_A_MAX, DEFAULT_COARSE_SECTOR_NUM, DEFAULT_DT_COARSE,
     DEFAULT_DT_FINE, DEFAULT_FINE_REFINE_RATIO, DEFAULT_LOCAL_FINE_DIR_NUM,
     DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG, DEFAULT_TOL, DEFAULT_T_TOTAL,
-    aggregate_ea_modes, compute_ea_modes,
+    aggregate_ea_modes, compute_ea_modes, get_core_provenance,
 )
 from yaw_rate import (
     CausalYawRateEWMA, DEFAULT_TAU_S, DEFAULT_DEADBAND_RAD_S, DEFAULT_DECIMALS,
 )
+from evasive_acceleration.runtime import _preflight_runtime
 
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_DIR = PROJECT_ROOT_DIR / "demo_data"
@@ -44,7 +47,7 @@ OUTPUT_SUFFIX = "EA"
 ROUND_DECIMALS = 4
 EA_COLUMNS = ("EA_CTCT", "EA_CTCV", "EA_CVCT", "EA_CVCV", "EA")
 
-# Use exactly the same defaults as the legacy core and single-frame API.
+# Use the same finite-horizon paper defaults as the single-frame API.
 SOLVER_DEFAULTS = {
     "coarse_sector_num": DEFAULT_COARSE_SECTOR_NUM,
     "local_fine_half_window_deg": DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG,
@@ -277,6 +280,17 @@ def _software_version() -> str:
         return "uninstalled source checkout"
 
 
+def _dependency_versions() -> dict[str, str | None]:
+    """Record the numerical environment without importing optional packages."""
+    versions = {}
+    for name in ("numpy", "numba", "pandas"):
+        try:
+            versions[name] = version(name)
+        except PackageNotFoundError:
+            versions[name] = None
+    return versions
+
+
 def _read_input_csv(path: Path) -> pd.DataFrame:
     """Validate the original header before pandas can rename duplicate fields."""
     with path.open(encoding="utf-8-sig", newline="") as stream:
@@ -323,6 +337,13 @@ def process_one_csv(
             f"Result already exists: {existing[0]}. Choose --output-dir or explicitly use --overwrite."
         )
 
+    # Optional engine setup is a run-level failure, not one solver error/NaN
+    # per row. Capture the active runtime before the measured frame loop and
+    # before creating any output; the causal yaw-rate processing is unchanged.
+    _preflight_runtime()
+    runtime_provenance = get_core_provenance()
+
+    input_digest = hashlib.sha256(input_path.read_bytes()).hexdigest()
     df = _read_input_csv(input_path)
     validate_required_columns(df, str(input_path), yaw_rate_source, time_column)
     yaw = prepare_yaw_rate_inputs(
@@ -415,6 +436,11 @@ def process_one_csv(
     }
     metadata = {
         "schema_version": 1, "software_version": _software_version(),
+        "core_id": runtime_provenance["core_id"],
+        "backend": "EA",
+        "core_provenance": runtime_provenance,
+        "input_sha256": input_digest,
+        "dependency_versions": _dependency_versions(),
         "requested_yaw_rate_source": yaw_rate_source,
         "time_column": time_column,
         "yaw_rate": {"tau_s": yaw_rate_tau_s, "deadband_rad_s": yaw_rate_deadband_rad_s,
@@ -425,6 +451,10 @@ def process_one_csv(
         },
         "status_counts": dict(Counter(statuses)), "statistics": stat,
     }
+    if hashlib.sha256(input_path.read_bytes()).hexdigest() != input_digest:
+        raise RuntimeError("Input CSV changed during computation; no results were written.")
+    if get_core_provenance() != runtime_provenance:
+        raise RuntimeError("EA runtime changed during computation; no results were written.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation prevents a concurrent run from silently replacing results.
     mode = "w" if overwrite else "x"
@@ -452,6 +482,11 @@ def process_one_csv(
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
+    try:
+        _preflight_runtime()
+    except RuntimeError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 2
     if args.input is not None:
         files = [args.input]
     else:
