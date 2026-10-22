@@ -97,7 +97,11 @@ def build_native_library(output=None, compiler: str = "g++", native: bool = Fals
         flags.extend(["-march=native", "-mtune=native"])
     if sys.platform == "win32":
         # MinGW-w64 exports the unchanged extern-C ABI from the frozen source.
-        flags.extend(["-static-libgcc", "-static-libstdc++", "-Wl,--export-all-symbols"])
+        # Also link MinGW's thread support statically. Otherwise libstdc++
+        # can introduce libwinpthread-1.dll, which ctypes' restricted Windows
+        # DLL search does not resolve from the compiler's PATH on clean hosts.
+        flags.extend(["-static", "-static-libgcc", "-static-libstdc++",
+                      "-Wl,--export-all-symbols"])
     else:
         flags.append("-fPIC")
         if sys.platform == "darwin":

@@ -16,7 +16,9 @@ python -m evasive_acceleration.native_build
 
 The build requires an available GCC-compatible C++17 compiler (`g++`, or
 MinGW-w64 `g++` on Windows); it does not install one. Use `--compiler` to select
-its executable if needed. The
+its executable if needed. Windows builds statically link the MinGW runtime,
+including thread support, so loading does not depend on compiler-private DLLs.
+The
 default build uses a user cache outside the repository. For host-specific
 optimization, add `--native`. A custom build location can be selected with
 `--output`; use a fresh path, then set `EA_NATIVE_CELLS_LIBRARY` to the resulting

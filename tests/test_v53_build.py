@@ -3,6 +3,7 @@
 import hashlib
 import json
 import subprocess
+import sys
 
 import pytest
 
@@ -100,5 +101,7 @@ def test_gnu_build_uses_argv_strict_floating_point_and_explicit_cpu_choice(
     assert "-fno-fast-math" in command and "-ffp-contract=off" in command
     assert "-ffast-math" not in command and "-Ofast" not in command
     assert ("-march=native" in command) is host_specific
+    if sys.platform == "win32":
+        assert "-static" in command, "do not require compiler-private thread DLLs at runtime"
     assert any(str(x).endswith("native_cells.cpp") for x in command)
     assert not (tmp_path / "new output.so").exists()
