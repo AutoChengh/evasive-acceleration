@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "record_context": "Historical acceptance and integration snapshot before the single-implementation release. Solver identifiers and selector fields below describe that frozen review snapshot, not the current public API; the current main branch exposes EA only.",
   "solver": "v53",
   "default_public_backend": "paper",
   "v53_is_explicit_opt_in": true,

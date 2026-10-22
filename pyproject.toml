@@ -4,18 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evasive-acceleration"
-version = "0.3.0.dev1"
+version = "0.3.0"
 description = "Evasive Acceleration for instantaneous traffic-conflict assessment"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [{name = "Hao Cheng"}]
-dependencies = ["numpy>=1.23"]
+dependencies = ["numpy>=1.23", "numba>=0.57"]
 
 [project.optional-dependencies]
 batch = ["pandas>=1.5"]
 viz = ["pandas>=1.5", "matplotlib>=3.6", "Pillow>=9"]
-fast = ["numba>=0.57"]
 dev = ["pytest>=7", "build>=1"]
 notebook = ["pandas>=1.5", "matplotlib>=3.6", "Pillow>=9", "nbformat>=5.7", "nbclient>=0.8", "ipykernel>=6", "ipywidgets>=7.6", "notebook>=6.5"]
 
@@ -23,7 +22,7 @@ notebook = ["pandas>=1.5", "matplotlib>=3.6", "Pillow>=9", "nbformat>=5.7", "nbc
 ea = "evasive_acceleration.cli:main"
 
 [project.urls]
-Repository = "https://github.com/AutoChengh/evasive-acceleration-v2"
+Repository = "https://github.com/AutoChengh/evasive-acceleration"
 
 [tool.setuptools]
 # Explicit mapping selects an import hook for editable installs. Its .pth
@@ -36,7 +35,6 @@ where = ["src"]
 include = ["evasive_acceleration*"]
 
 [tool.setuptools.package-data]
-"evasive_acceleration._paper" = ["*.json"]
 "evasive_acceleration._experimental" = ["native_cells.cpp", "v53_sources.json"]
 
 [tool.pytest.ini_options]

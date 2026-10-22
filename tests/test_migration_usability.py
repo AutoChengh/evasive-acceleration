@@ -1,4 +1,4 @@
-"""The paper-core migration preserves the public API and causal input path."""
+"""EA preserves the public API, infinite contact states and causal input path."""
 
 import hashlib
 import json
@@ -40,7 +40,7 @@ def test_nonfinite_options_fail_before_entering_the_solver(option, value):
         build_compute_kwargs(state, state, **{option: value})
 
 
-def test_causal_yaw_and_provided_yaw_use_the_same_paper_solver():
+def test_causal_yaw_and_provided_yaw_use_the_same_ea_solver():
     current = RoadUserKinematicState(0, 0, 10, 0.02, 4.5, 1.8)
     estimated, diagnostic = build_state_with_estimated_yaw_rate(
         current, [0, 0.1, 0.2], [0, 0.01, 0.02],

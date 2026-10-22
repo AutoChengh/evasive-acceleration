@@ -22,19 +22,22 @@ SPEC.loader.exec_module(comparison)
 
 @pytest.fixture(scope="module")
 def computed_comparison(tmp_path_factory):
-    # Two computations with the default finite-horizon paper solver.
+    # Two computations with the only public continuous-time EA solver.
     directory = tmp_path_factory.mktemp("synthetic-comparison")
     results = comparison.run_comparison(directory, make_plot=False)
     return results, directory
 
 
-def test_equal_ttc_has_different_default_ea(computed_comparison):
+def test_equal_ttc_has_different_default_ea(computed_comparison, aligned_straight_ea_infimum):
     results, _ = computed_comparison
     assert list(results["provenance"]) == ["synthetic", "synthetic"]
     assert results["TTC_s"].tolist() == pytest.approx([2.0, 2.0], abs=1e-12)
-    assert results["EA_m_s2"].tolist() == pytest.approx(
-        [0.5, 0.870648557698041], abs=1e-8
-    )
+    # The expected values are analytical continuous-time infima, not numbers
+    # copied from either the historical grid estimator or the current solver.
+    for row in results.to_dict(orient="records"):
+        width = (row["a_width_m"] + row["b_width_m"]) / 2.
+        exact = aligned_straight_ea_infimum(row["clearance_m"], width, row["closing_speed_m_s"])
+        assert -1e-8 <= row["EA_m_s2"] - exact <= .001 + 1e-12
     assert results.iloc[1]["EA_m_s2"] - results.iloc[0]["EA_m_s2"] > 0.3
     assert results["clearance_m"].tolist() == pytest.approx([4.0, 20.0])
     assert results["DRAC_m_s2"].tolist() == pytest.approx([0.5, 2.5])
@@ -56,7 +59,7 @@ def test_comparison_exports_complete_inputs_and_settings(computed_comparison):
     assert metadata["synthetic"] is True
     assert len(metadata["input_sha256"]) == 64
     assert metadata["solver_settings"]["T_total"] == 10.0
-    assert metadata["solver_settings"]["dt_fine"] == 0.02
+    assert "dt_fine" not in metadata["solver_settings"], "legacy grid options are not the EA algorithm"
     assert metadata["solver_settings"]["tol"] == 1e-3
     assert metadata["outputs"]["figure"] is None
     assert metadata["font_provenance"] is None

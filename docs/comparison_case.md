@@ -15,7 +15,8 @@ shared Fig. 1 colors. The CSV, not the image labels, is the numerical record.
 From the repository root:
 
 ```bash
-python -m pip install -e ".[viz,fast]"
+python -m pip install -e ".[viz]"
+python -m evasive_acceleration.native_build
 python examples/comparison_case.py --output-dir outputs/comparison_case
 ```
 
@@ -46,8 +47,7 @@ New targets are created exclusively to prevent accidental replacement.
 When replacement is requested, prepared artifacts replace old files one at
 a time; this is not a multi-file atomic filesystem transaction.
 
-The script calls the public `compute_ea` API backed by the paper's finite-horizon
-numerical core, plus the existing
+The script calls the public `compute_ea` API, plus the existing
 `baseline_risk_metrics.compute_real_time_metrics_dict` function. The historical
 baseline implementation is unchanged. No EA search settings are relaxed for
 this demonstration.
@@ -82,7 +82,7 @@ TTC = clearance / closing_speed
 | Initial bumper clearance | 4 m | 20 m |
 | Closing speed | 2 m/s | 10 m/s |
 | Computed TTC | 2.00 s | 2.00 s |
-| Computed EA, approximately | 0.500 m/s² | 0.871 m/s² |
+| Computed EA, approximately | 0.500 m/s² | 0.886 m/s² |
 | Computed longitudinal DRAC | 0.500 m/s² | 2.500 m/s² |
 
 Custom input cases must also have equal finite positive TTC values (relative
@@ -102,7 +102,7 @@ relative acceleration directions; it is not restricted to longitudinal
 braking. In Case 2, its EA is therefore lower than longitudinal DRAC.
 
 The nominal trajectories for CTCT, CTCV, CVCT, and CVCV coincide here because
-both yaw rates are zero. All four use the same finite-horizon numerical
+both yaw rates are zero. All four use the same continuous-time numerical
 procedure and therefore agree for these inputs. The reported EA still uses
 the four-mode arithmetic mean; the example does not substitute a single branch.
 
@@ -123,13 +123,8 @@ used in ordinary single-frame computation. It records them in the run JSON:
 | Setting | Default |
 |---|---:|
 | Future horizon | 10 s |
-| Coarse / fine time step | 0.1 / 0.02 s |
 | Maximum searched acceleration | 100 m/s² |
-| Acceleration tolerance | 0.001 m/s² |
-| Coarse directions | 72 |
-| Local fine directions | 101 |
-| Local fine half-window | 5 degrees |
-| Fine refinement ratio | 1.15 (retained compatibility parameter; unused by the verified runtime) |
+| Global objective gap target | 0.001 m/s² |
 | Geometry size scale | 1.0 |
 
 ## Notebook use

@@ -15,14 +15,10 @@ Paper: [Driving risk emerges from the required two-dimensional joint evasive acc
 
 [Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Python usage](#python-usage) · [Input conventions](#input-conventions) · [Measure runtime](#measure-runtime)
 
-This is the independent v2 development and review repository. The
-[original EA repository](https://github.com/AutoChengh/evasive-acceleration)
-is unchanged.
-
-This review branch also provides the opt-in **v53 solver**, with globally
-bounded numerical refinement and the same state and causal yaw-rate APIs.
-The default paper-compatible solver is retained. See [v53 setup, usage, and
-validation](docs/runtime_v53.md).
+One EA implementation serves the Python API, command line, and notebooks.
+Provide yaw rates directly, or estimate missing values from current and past
+headings. See [installation](#install-and-run) to prepare the native component
+once before use.
 
 ## Visual overview
 
@@ -76,8 +72,8 @@ After installing the visualization extras, reproduce the comparison with:
 python examples/comparison_case.py --output-dir outputs/comparison_case
 ```
 
-Both cases have TTC = 2.00 s, while the paper-version solver gives EA of about
-0.500 and 0.871 m/s². These are explicitly synthetic illustrations, not paper
+Both cases have TTC = 2.00 s, while EA is approximately
+0.500 and 0.886 m/s². These are explicitly synthetic illustrations, not paper
 experiment data or evidence for a universal safety threshold. EA permits
 two-dimensional relative avoidance, not only lane-constrained braking.
 
@@ -90,7 +86,8 @@ enabled, warned font fallback is only for previews or hosted CI.
 From a source checkout:
 
 ```bash
-python -m pip install -e ".[notebook,fast]"
+python -m pip install -e ".[notebook]"
+python -m evasive_acceleration.native_build
 python -m notebook notebooks/ea_quickstart.ipynb
 ```
 
@@ -104,14 +101,15 @@ for font setup, hosted notebook use after publication, and headless execution.
 From a source checkout, with Python 3.10 or newer:
 
 ```bash
-git clone --branch review/v53-integration-20261022 https://github.com/AutoChengh/evasive-acceleration-v2.git
-cd evasive-acceleration-v2
-python -m pip install -e ".[batch,viz,fast]"
+git clone https://github.com/AutoChengh/evasive-acceleration.git
+cd evasive-acceleration
+python -m pip install -e ".[batch,viz]"
+python -m evasive_acceleration.native_build
 ea single
 ea batch --input examples/data/without_yaw_rate.csv
 ```
 
-The single-frame example prints approximately `EA = 4.800 m/s^2`. The batch
+The single-frame example prints approximately `EA = 4.911 m/s^2`. The batch
 command automatically estimates missing yaw rates. Open:
 
 ```text
@@ -124,28 +122,18 @@ The JSON records the input, settings, and run summary. Existing result files
 are protected; rerun with `--overwrite` to replace them.
 
 For computation only, `python -m pip install -e .` installs the minimal package.
-The optional `batch`, `viz`, and `fast` extras add CSV processing, plotting, and
-Numba acceleration respectively. Numba's first call can include compilation
-time. `python -m evasive_acceleration` accepts the same commands as `ea`.
+The optional `batch` and `viz` extras add CSV processing and plotting.
+Numba is included in the base installation; its first call can include JIT
+compilation time. `python -m evasive_acceleration` accepts the same commands as `ea`.
 The `notebook` extra includes the interactive notebook and execution dependencies;
 it is not required for ordinary EA computation.
 
-To try v53, build its native component once, then select it explicitly:
-
-```bash
-python -m evasive_acceleration.native_build
-ea single --backend v53
-```
-
-The native build needs a C++ compiler; EA calls never compile it automatically.
-See the [v53 guide](docs/runtime_v53.md) for compiler setup, Python usage, and
-the complete [example](examples/v53_usage.py). Existing commands without
-`--backend v53` keep their previous solver.
-
-If repository access is restricted, Git cloning requires an authorized
-GitHub account. Use a separate virtual environment when comparing
-with the original version, because the Python distribution/import names remain
-`evasive-acceleration` / `evasive_acceleration`. This upload is not a PyPI release.
+The one-time native build requires a GCC-compatible C++17 compiler (`g++`,
+or MinGW-w64 `g++` on Windows). It does not install a compiler and is never
+launched automatically by an EA call. Missing dependencies fail explicitly.
+See the [setup and runtime guide](docs/runtime.md#prepare-the-native-component)
+for compiler selection and custom build paths. Source installation is shown
+here; this update does not imply a PyPI release.
 
 ## Three ready-to-run inputs
 
@@ -194,7 +182,7 @@ agent_b = RoadUserState(
     length=4.7, width=1.9, yaw_rate=0.0,
 )
 ea = compute_ea(agent_a, agent_b)
-print(f"EA = {ea:.3f} m/s^2")  # Approximately 4.800 m/s².
+print(f"EA = {ea:.3f} m/s^2")  # Approximately 4.911 m/s².
 ```
 
 ### Yaw rate is unavailable
@@ -227,17 +215,7 @@ must match the corresponding current state. For continuous online use, keep
 one `CausalYawRateEWMA` instance per object; see the
 [yaw-rate method and API](docs/causal_yaw_rate.md).
 
-The same inputs work with v53 after its one-time setup:
-
-```python
-from evasive_acceleration import use_backend
-
-with use_backend("v53"):
-    ea = compute_ea(state_a, state_b)
-```
-
-Leaving the context restores the preceding backend. The yaw-rate estimator is
-unchanged; selecting a solver does not change heading preprocessing.
+Both yaw-rate paths call the same EA solver; there is no backend selection.
 
 ## Input conventions
 
@@ -295,10 +273,10 @@ output deadband `0.002 rad/s`, and four output decimals. The internal state
 keeps full precision. These preprocessing settings and initialization behavior
 are documented in [docs/causal_yaw_rate.md](docs/causal_yaw_rate.md).
 
-Both supplied and estimated yaw rates feed the same numerical EA core. To
-recompute paper results, use the yaw-rate values provided with the corresponding
-paper inputs. The causal EWMA path is available for your own data when yaw rate
-is missing; it need not reproduce those supplied observations.
+Both supplied and estimated yaw rates feed the same numerical EA core.
+Use the corresponding supplied yaw rates when reproducing an input experiment;
+re-estimating them changes the inputs. Historical paper reproduction is
+documented in the [source archive guide](docs/history.md).
 
 ## Command-line reference
 
@@ -344,7 +322,7 @@ code installed from a wheel should be given explicit external input paths.
 | `EA_baseline_error` | Separate error detail for optional baseline calculations |
 
 `EA = 0` means no added relative acceleration is required over the evaluated
-motion models and finite horizon. `inf` is the paper core's result for current
+motion models and finite horizon. `inf` is the solver's result for current
 body contact or no feasible acceleration within the configured search.
 `NaN` indicates an unavailable or invalid computation; inspect status and error
 columns. A first estimated yaw rate of `0` is an initialization placeholder,
@@ -365,11 +343,6 @@ The new comparison avoids initially overlapping boxes.
 
 ## What EA computes
 
-This section describes the retained default paper-compatible solver. The
-opt-in [v53 solver](docs/runtime_v53.md#what-changes-numerically) uses the same
-four-mode EA definition with continuous-time safety checks and a global
-0.001 m/s² upper/lower accuracy target.
-
 Two nominal motion models are used for each road user:
 
 - **CV:** constant speed and heading.
@@ -381,34 +354,24 @@ EA is the minimum magnitude of a constant two-dimensional relative acceleration
 that avoids predicted body contact. The final score is the arithmetic mean of
 these four scalar magnitudes, not a mean of acceleration vectors.
 
-All four pairings use the same finite-horizon numerical search, including
-CV–CV. For each candidate direction, the solver combines collision-producing
-acceleration intervals and finds the smallest feasible magnitude. A coarse
-direction/time search is followed by local refinement. Every local direction
-is solved on the fine time grid, and finite candidates must pass an actual
-SAT collision check. No unverified coarse-grid value is returned as a fallback.
-
-Version `0.3.0.dev1` adds verified boundary handling and full local fine-grid
-evaluation to the earlier paper-core migration. The frozen paper reference is
-retained for comparison. State, batch, and causal yaw-rate interfaces remain
-available; numerical results are not required to preserve earlier solver defects.
+All four pairings use continuous-time collision verification over the finite
+prediction horizon and a global search in two-dimensional acceleration space.
+With the default tolerance, a finite result is accepted only after conservative
+body-contact verification and an upper/lower objective gap of at most
+0.001 m/s² per pairing. The same computation serves supplied and causally
+estimated yaw rates.
 
 | Setting | Default |
 |---|---:|
 | Prediction horizon `T_total` | 10 s |
-| Coarse / fine time step `dt_coarse` / `dt_fine` | 0.1 / 0.02 s |
 | Maximum acceleration `a_max` | 100 m/s² |
-| Interval connectivity tolerance `tol` | 0.001 m/s² |
-| Coarse directions | 72 |
-| Local fine search | 101 directions within ±5° |
+| Global objective gap target `tol` | 0.001 m/s² |
 | Geometry size scale | 1.0 |
 
 Report numerical settings and yaw-rate preprocessing when reproducing an
-experiment. Both yaw-rate input paths use this same four-pairing core; the
-paper code's separate nine-pairing CTRA extension is not included in `EA`.
-The `fine_refine_ratio` argument is accepted for compatibility but no longer
-skips fine verification. With custom time steps, the final verification uses
-the smaller of `dt_coarse` and `dt_fine`.
+experiment. The score includes the four CV/CTRV pairings, not a separate
+nine-pairing CTRA extension. Older numerical implementations are retained only
+as [historical source archives](docs/history.md), not alternate runtime options.
 See the paper for evaluation protocols and comparisons, and
 [validation details](docs/validation.md) for source consistency and timing checks.
 
@@ -424,20 +387,13 @@ your selected input with the same four-pairing EA core. Both exclude warm-up
 and save every measured call, including slow observations, alongside settings
 and environment information. An existing output directory is never overwritten.
 
-A separate 857,820-frame, single-pass implementation check measured a mean of
-2.424 ms and P95 of 12.572 ms on the recorded Linux/Xeon/Numba setup. This is
-not a speed guarantee for another workload or machine; the complete result,
-including the observed tail and separately reported replays, is in the
-[runtime guide](docs/runtime.md). Minimal package installation is sufficient
-for the local benchmark; CSV processing and plotting extras are not required.
-
-In the separate frozen v53 acceptance run, all 857,820 raw frames had a mean
-of 0.154 ms and an observed maximum of 14.448 ms; the maximum across recorded
-stress/repeated tests was 15.820 ms. These measurements used a sufficiently
-warmed single CPU core on server 39103, not a universal timing guarantee.
-See the [v53 acceptance record](docs/runtime_v53.md#recorded-full-cohort-acceptance)
-for the precise conditions and numerical checks; select `--backend v53` to
-benchmark the integrated version on your machine.
+A frozen 857,820-frame pass measured a mean of 0.154 ms and an observed maximum
+of 14.448 ms for one road-user pair's four-mode EA computation on a warmed
+single CPU core. This excludes perception, tracking, yaw-rate estimation and
+data preparation. All original observations, including nine `inf` results,
+were retained. See the [runtime guide](docs/runtime.md) for the environment,
+timing boundary and complete statistics. Benchmark your own machine and inputs;
+these observed times are not a universal hard-real-time bound.
 
 ## Generate GIFs from a source checkout
 
@@ -454,8 +410,7 @@ time-range options. The rendering script is separate from computation.
 
 ```text
 src/evasive_acceleration/        Installable API and command-line entry point
-src/core_ea.py                  Compatible adapter to the paper numerical core
-src/evasive_acceleration/_paper/ Frozen paper calculator, motion and solver modules
+src/core_ea.py                  Four-mode EA numerical interface
 src/single_frame.py             State helpers and compatible source entry point
 src/batch_compute.py            CSV pipeline and compatible source entry point
 src/yaw_rate.py                 Causal yaw-rate estimator
@@ -476,26 +431,27 @@ pyproject.toml                 Package metadata and optional dependencies
 ## Development checks
 
 ```bash
-python -m pip install -e ".[batch,viz,fast,dev]"
+python -m pip install -e ".[batch,viz,dev]"
+python -m evasive_acceleration.native_build
 python -m pytest
 ```
 
-Tests check paper-core numerical consistency, yaw-rate numerics and causality,
+Tests check numerical accuracy and collision verification, yaw-rate causality,
 installed imports, and batch input/output behavior. They also cover the
 comparison inputs and results, custom-data conversion, output protection, and
-figure typography. The vendored paper modules and historical baseline source
-are protected by normalized source hashes.
+figure typography. Numerical sources, historical baseline functions and the
+causal yaw-rate estimator are protected by source-integrity checks.
 
-Start with the [current validation guide](docs/validation.md). Earlier version
-checks remain available in the [validation history](docs/validation_history.md).
+Start with the [validation guide](docs/validation.md). Older implementations
+and their records are available through the [historical archives](docs/history.md).
 
 ```bash
-python tools/check_core_integrity.py
+python tools/check_solver_integrity.py
 python tools/execute_quickstart.py --output outputs/notebooks/ea_quickstart.executed.ipynb
 ```
 
 The [automated workflow](.github/workflows/tests.yml) defines Linux/Windows,
-Python 3.10/3.12, accelerated/unaccelerated, isolated-wheel and notebook checks.
+Python 3.10/3.12, native execution, isolated-wheel and notebook checks.
 Local testing does not mean those hosted jobs have already run; see
 [validation details](docs/validation.md).
 

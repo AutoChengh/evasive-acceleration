@@ -1,7 +1,7 @@
 # Runnable examples
 
-The examples use the paper's finite-horizon EA core through the existing public
-interfaces. Start with:
+The examples use the same EA core and public interfaces as ordinary computation.
+Start with:
 
 - [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC
   states with different EA, and export full inputs, results, settings, and a
@@ -22,7 +22,8 @@ must not use preview fallback.
 Install from the repository root:
 
 ```bash
-python -m pip install -e ".[batch,fast]"
+python -m pip install -e ".[batch]"
+python -m evasive_acceleration.native_build
 python examples/provided_state.py
 python examples/from_history.py
 ea batch --input examples/data/provided.csv --yaw-rate-source provided
@@ -30,7 +31,7 @@ ea batch --input examples/data/without_yaw_rate.csv
 ea batch --input examples/data/mixed_yaw_rate.csv
 ```
 
-The first Python example prints `EA = 4.800 m/s^2`. The history example prints
+The first Python example prints `EA = 4.911 m/s^2`. The history example prints
 the estimated yaw rates and initialization diagnostics before EA. Imports use
 the installed public package, so both scripts can be copied elsewhere.
 

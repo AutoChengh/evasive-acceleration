@@ -1,7 +1,7 @@
 # Interactive EA quickstart
 
 The notebook reuses the same public API, synthetic comparison, custom-data
-adapter, and paper-version finite-horizon EA core as the command-line examples. It is not a
+adapter, and EA core as the command-line examples. It is not a
 reproduction of the paper's statistical experiments.
 
 ## Local Jupyter
@@ -9,7 +9,8 @@ reproduction of the paper's statistical experiments.
 From a source checkout, install into a virtual environment:
 
 ```bash
-python -m pip install -e ".[notebook,fast]"
+python -m pip install -e ".[notebook]"
+python -m evasive_acceleration.native_build
 python -m notebook notebooks/ea_quickstart.ipynb
 ```
 
@@ -34,19 +35,14 @@ rendered, and saves diagnostics outside the tracked source notebook.
 
 ## Colab or another hosted notebook
 
-After these files are published to your branch/fork, open
-`notebooks/ea_quickstart.ipynb` in Colab through its GitHub notebook picker.
-This independent evaluation repository is initially private. Anonymous Colab
-cloning is disabled by default; for now, use the local notebook or upload an
-authorized source checkout and run from its directory. Do not paste a GitHub
-token into a notebook. Once the repository is made public, explicitly enable
-ALLOW_PUBLIC_BOOTSTRAP in the setup cell. Set SOURCE_REVISION to the published
-branch/tag/commit containing this notebook if it is not yet on main. Record
-the printed checkout commit with any reproduced result.
-Local notebook execution never clones or installs packages automatically.
-
-This is an optional hosted route, not a claim that an unpublished local
-notebook is already available at a public URL.
+Open [the public notebook](https://colab.research.google.com/github/AutoChengh/evasive-acceleration/blob/main/notebooks/ea_quickstart.ipynb)
+in Colab. Set `ALLOW_PUBLIC_BOOTSTRAP=True` to permit cloning and installing
+the public repository in the hosted session. The setup explicitly builds
+the native component before any EA call; an available C++17 `g++` is required.
+Set `SOURCE_REVISION` to a branch, tag or commit when pinning a run and record
+the printed checkout commit. Do not paste access tokens into a notebook.
+Local execution never clones or installs automatically; prepare the native
+library with the local setup above.
 
 ## Match Fig. 1 typography and colors
 

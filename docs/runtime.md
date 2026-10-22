@@ -1,129 +1,153 @@
-# Measure EA runtime
+# EA setup and runtime
 
-Use `ea benchmark` to check warmed EA computation on your machine. It uses
-the existing four-pairing core, not a second or simplified solver.
+The Python API, command line and notebook use one EA implementation. It
+computes all four CV/CTRV pairings and their arithmetic mean, with
+continuous-time collision verification and globally bounded numerical search.
 
-The default remains the paper-compatible solver. For the opt-in v53 solver,
-prepare its native component and pass `--backend v53`; see the
-[v53 setup and full-cohort acceptance record](runtime_v53.md). The historical
-table below measures the earlier paper-compatible implementation, not v53.
+## Prepare the native component
 
-## Quick check
+Install the package and build once, before computing EA:
 
-After installing the package:
+```bash
+python -m pip install -e .
+python -m evasive_acceleration.native_build
+ea single
+```
+
+Numba is a base dependency. The native build requires a GCC-compatible C++17
+compiler (`g++`, or MinGW-w64 `g++` on Windows); it does not install one. Pass
+`--compiler` to select an executable. Windows builds statically link the
+MinGW runtime, including thread support, so loading does not depend on
+compiler-private DLLs.
+
+By default the library is stored in a user cache outside the checkout.
+For host-specific optimization, add `--native`. To build into a custom
+location, use `--output` with a fresh path and set `EA_NATIVE_CELLS_LIBRARY`
+to the resulting library when running EA. See
+`python -m evasive_acceleration.native_build --help` for platform options.
+
+An EA call never launches a compiler or silently substitutes another solver.
+Missing dependencies fail explicitly. The first calls can still JIT-compile
+Numba functions; benchmark only after warming the needed input paths on the
+same CPU.
+
+## Quick benchmark
 
 ```bash
 ea benchmark
-```
-
-This measures three explicitly synthetic states: head-on, separated parallel
-motion, and crossing. It is a smoke test, not the paper's dataset benchmark.
-No Pandas, plotting dependency, or source-checkout data file is required.
-The default output is a fresh timestamped directory under `outputs/`.
-
-For a relevant workload, supply finite instantaneous states in the
-[provided-yaw-rate CSV schema](../README.md#batch-csv-schema):
-
-```bash
 ea benchmark --input examples/data/provided.csv --output-dir outputs/runtime_provided
 ea benchmark --input-dir /path/to/csvs --output-dir outputs/runtime_all
 ```
 
-The directory command reads source CSVs in sorted order, non-recursively,
-skipping names ending in `_EA.csv`. An explicit `--input` may select any
-valid CSV. Every selected row must have finite `Yawrate` and `2_Yawrate`;
-the benchmark does not estimate them or silently discard invalid rows.
+Without input arguments, the command measures three synthetic states:
+head-on, separated parallel motion and crossing. This is a smoke test, not
+the paper's dataset benchmark. It needs no Pandas or plotting dependencies.
 
-For missing yaw rates, use the batch or Python history workflow first and
-explicitly supply the resulting used yaw rates under those two input column
-names. This keeps preprocessing outside the measured EA interval.
+The directory command reads CSVs in sorted order, non-recursively, skipping
+names ending in `_EA.csv`. Each selected row must have finite `Yawrate` and
+`2_Yawrate` in the [input schema](../README.md#batch-csv-schema). Invalid rows
+are not silently dropped. For missing yaw rates, first use the batch or
+history workflow and explicitly supply the resulting used rates under those
+two names; preprocessing stays outside the EA timer.
 
 ## What is timed
 
-Each interval uses `time.perf_counter_ns()` around the four CV/CTRV mode
-evaluations and their aggregate mean. Import, CSV parsing, state conversion,
-yaw-rate validation/estimation, warm-up, hashing, and output writes are excluded.
-For the default `paper` backend, the defaults are three excluded warm-up calls
-and one measured pass per frame. With `--backend v53`, the excluded warm-up
-count is `max(--warmup, number of selected inputs)`: every selected input is
-evaluated at least once before measurement, including turning and fallback
-paths. Both backends default to one measured pass per frame. The JSON records
-the requested and actual warm-up counts separately.
+Each `time.perf_counter_ns()` interval includes the complete four-mode solve
+and arithmetic mean for one interaction pair. Import, CSV parsing, state
+conversion, yaw-rate validation/estimation, compilation, warm-up, hashing and
+output writes are excluded.
+
+Before measurement, the command evaluates every selected input at least once.
+The actual excluded warm-up count is `max(--warmup, number of selected inputs)`;
+requested and actual counts and warm-up durations are recorded separately.
+The default is one measured pass per frame. Longer warm-up is important for
+heterogeneous input paths; compilation is not a measured EA operation.
 
 ```bash
 ea benchmark --input-dir /path/to/csvs --warmup 3 --repeats 1 --max-frames 0 --output-dir outputs/runtime_full
 ```
 
-`--max-frames 0` includes every input row. A positive value selects the first
-N rows in sorted file order, not a random or representative sample. `--horizon`
-can change the default 10 s prediction horizon; the actual value is recorded.
-Use `--repeats` only when you intentionally want repeated measurements. All
-repeats are retained, not reduced to their fastest result.
+`--max-frames 0` includes every row. A positive value selects the first N
+rows in sorted file order, not a random or representative sample. `--horizon`
+changes the default 10 s horizon and is recorded. Repeated measurements are
+retained individually, never reduced to their fastest result.
 
-On systems supporting process affinity, optionally select a logical CPU:
+On systems supporting affinity, optionally use `--cpu 20` to select a logical
+CPU. On Windows omit `--cpu`; unsupported affinity requests fail explicitly.
+The command records available affinity and numerical-library thread settings.
+Set thread environment variables before Python starts rather than changing
+them after NumPy has loaded.
 
-```bash
-ea benchmark --input-dir /path/to/csvs --cpu 20 --output-dir outputs/runtime_cpu20
+## Output
+
+- `benchmark_frames.csv`: every measured duration, source row, repeat, four
+  components, mean, numerical status and error.
+- `benchmark_summary.json`: counts, mean/median/P95/P99/maximum, counts above
+  15/20/50/100 ms, excluded warm-up, settings, environment and source/input hashes.
+
+Existing output directories are protected. `inf` is retained as a numerical
+outcome for current contact or no feasible bounded solution, separately from
+execution errors and `NaN`. Failed calls remain in both the CSV and all-call
+latency statistics and cause a nonzero exit.
+
+## Recorded full-cohort acceptance
+
+A frozen source/build/input set evaluated all 857,820 original interaction
+frames, once, serially on one logical CPU of an Intel Xeon Gold 6226R with
+Python 3.12.13. One process/thread was used. The measured call included all
+four CV/CTRV components and their arithmetic mean.
+
+| Measure | Recorded result |
+|---|---:|
+| Frames | 857,820 |
+| Mean | 0.153683 ms |
+| Median | 0.068359 ms |
+| P95 | 0.619070 ms |
+| P99 | 1.537522 ms |
+| Maximum | 14.448126 ms |
+| Calls above 20 ms | 0 |
+| Execution errors / NaN frames | 0 / 0 |
+
+There were 5,993 excluded same-core warm-up calls, plus a separate untimed
+diagnostic pilot, with no JIT signature growth during measurement. The native
+build used host-specific optimization, strict float64, no fast-math and
+disabled FMA contraction. No slow observation was removed or replaced by a
+faster replay. Nine raw-input frames retained `inf` results; corrected inputs
+were checked separately and did not replace primary observations.
+
+All finite results were within 0.000949699 m/s² of the independently frozen
+continuous-search reference. That reference is not the historical paper grid
+estimator. New and archived numerical implementations need not produce
+identical values. See [historical reproduction](history.md).
+
+The acceptance suite also included 1,160 expanded cases, 24,792 numerical,
+continuous-time safety, global-bound and geometric-invariance checks. The
+public adapter matched all 4,640 component outputs of the frozen numerical
+entry point; all 4,640 independent continuous-time safety checks passed.
+These are acceptance records, not a claim that a new GitHub commit has already
+passed hosted tests. The [machine-readable source record](data/ea_acceptance_20261022.json)
+retains original audit identifiers for traceability.
+
+These times measure one road-user pair, not perception, tracking, trajectory
+prediction, yaw-rate estimation or scene-wide evaluation. Rebenchmark another
+machine/compiler/workload; an observed maximum is not a universal hard
+real-time guarantee.
+
+## Source provenance
+
+The integrated numerical sources are the validated dependency closure frozen
+on 2026-10-22. Raw datasets, failed alternatives and compiled libraries are
+not bundled. Frozen source snapshot SHA256:
+
+```text
+37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15
 ```
 
-On Windows, omit `--cpu`; unsupported affinity requests fail explicitly. The
-command records affinity where available and existing numerical-library thread
-settings. It does not silently change thread settings after NumPy has loaded.
-To control threads, set the relevant environment variables before Python starts.
+Measured Linux native binary SHA256:
 
-Install the `fast` extra for Numba acceleration. Use separate environments for
-accelerated and NumPy-only comparisons. First compilation can be much slower
-than warmed calls; excluded warm-up durations are retained in the report.
+```text
+a0037dd2e748bf3af863d2e3b00e07ad1120115bfaa32f4d8f5230ee4ac119c1
+```
 
-## Output and interpretation
-
-- `benchmark_frames.csv`: every measured duration in ns and ms, source CSV row,
-  repeat number, four EA components, aggregate, numerical status, and error.
-- `benchmark_summary.json`: sample count, mean/median/P95/P99/maximum, counts
-  above 15/20/50/100 ms, excluded warm-up durations, settings, environment, and
-  source/input hashes.
-
-An existing output directory is never overwritten. Use a fresh path for a new
-run. `inf` is a valid core outcome for current contact or an unsuccessful bounded
-search; it is counted separately from execution errors and `NaN`. Failed calls
-remain in both the CSV and all-call latency summary, and cause a nonzero exit.
-
-These are times for one road-user pair per frame. They exclude perception,
-tracking, and scene-wide evaluation of many pairs. Do not interpret one run's
-maximum as a universal hard real-time bound or expect another machine to
-reproduce an identical number of milliseconds.
-
-## Large-cohort implementation check on 2026-10-20
-
-A separate frozen single-pass experiment evaluated 857,820 interaction frames
-from 4,418 EA-P90 scenes. Each implementation evaluated every frame once,
-serially on logical CPU 20 of an Intel Xeon Gold 6226R (nominal 2.90 GHz),
-with balanced order across 200-frame blocks. Numerical-library thread counts
-were one. The environment was Linux, Python 3.12.13, NumPy 2.3.5, and
-Numba 0.62.1. The core identity was
-`paper-aligned-verified-cv-ctrv-20261020` at source commit `7d6535d`.
-
-| Implementation | Mean ms | Median ms | P95 ms | P99 ms | Observed max ms |
-|---|---:|---:|---:|---:|---:|
-| Frozen reference in the same environment | 4.945 | 2.645 | 16.992 | 19.876 | 28.189 |
-| Current verified core | 2.424 | 0.408 | 12.572 | 15.303 | 567.985 |
-
-All original timing observations, including the rare long tail, are retained.
-The verified run had seven observations above 20 ms. Later input corrections
-and slow-frame replays were analysed separately, not substituted into this table.
-The aggregate record and source fingerprints are available in
-[the experiment summary](data/runtime_20261020_summary.json); full paper input
-trajectories are not bundled in this repository.
-
-A separate one-pass diagnostic replay covered all 10,291 frames previously
-observed above 15 ms. Its mean was 15.589 ms, P95 16.716 ms, and maximum
-20.488 ms; 8,471 remained above 15 ms and two above 20 ms. All four components
-and their aggregate matched the corresponding current-input results exactly.
-These selected difficult frames are not a fresh full-cohort benchmark. Their
-maximum does not replace the full-pass maximum above.
-
-The portable command measures the current installed implementation only; it
-does not reconstruct the reference benchmark or download EA-P90 automatically.
-The figures above are an implementation check, not a claim that all paper
-statistical analyses have been rerun with this core. Earlier local and
-historical-environment timings remain in [validation history](validation_history.md).
+The portable benchmark measures your installed source and build. It does not
+download the full paper cohort or reconstruct the frozen experiment.

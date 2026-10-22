@@ -1,7 +1,6 @@
-"""Frozen paper reference and a separately verified numerical runtime.
+"""Private type/constant compatibility for the frozen EA kernels.
 
-The four source modules listed in ``provenance.json`` are preserved verbatim.
-The public package calls verified_solver and verified_calculator through the
-four-model bridge. The unchanged reference calculator remains available for
-numerical comparisons, including its separate nine-pairing CTRA extension.
+This historical namespace contains no EA solver or alternate backend. Its
+import paths remain so the validated numerical kernel files stay unchanged.
+The former grid/local-search implementation exists only in the history tag.
 """

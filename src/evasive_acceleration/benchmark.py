@@ -175,9 +175,8 @@ def _source_hashes():
                   for path in (adapter.parent / "evasive_acceleration/_paper").glob("*.py")})
     result = {name: sha256(path) for name, path in sorted(paths.items())}
     provenance = core_ea.get_core_provenance()
-    if provenance.get("backend") == "v53":
-        result.update(provenance["runtime_source_sha256"])
-        result["native_library"] = provenance["native_library_sha256"]
+    result.update(provenance["runtime_source_sha256"])
+    result["native_library"] = provenance["native_library_sha256"]
     return result
 
 
@@ -205,11 +204,10 @@ def run(args):
     source_hashes = _source_hashes()
     source_before = source_hashes["core_ea.py"]
     warmups = []
-    # v53 has separate lazy-compiled CV/CV, turning and exact-fallback paths.
+    # EA has separate lazy-compiled CV/CV, turning and exact-fallback paths.
     # A prefix of straight-driving inputs cannot warm a later turning path.
     # Exercise every selected input once before any reported measurement.
-    is_v53 = provenance.get("backend") == "v53"
-    warmup_count = max(args.warmup, len(cases)) if is_v53 else args.warmup
+    warmup_count = max(args.warmup, len(cases))
     for index in range(warmup_count):
         started = time.perf_counter_ns()
         modes, score = _evaluate(cases[index % len(cases)]["kwargs"])
@@ -255,7 +253,7 @@ def run(args):
         "unique_frames": len(cases), "repeats": args.repeats, "calls": len(times),
         "selection": "all input rows" if not args.max_frames else "first max_frames rows in sorted file order",
         "warmup_calls": warmup_count, "warmup_requested_calls": args.warmup,
-        "warmup_policy": "every selected input at least once" if is_v53 else "requested cyclic prefix",
+        "warmup_policy": "every selected input at least once",
         "warmup_elapsed_ms_excluded": warmups,
         "settings": {key: value for key, value in cases[0]["kwargs"].items() if key not in STATE_KEYS},
         "latency_all_calls": latency_summary(times),
@@ -265,7 +263,7 @@ def run(args):
         "source_sha256": source_hashes,
         "inputs": files, "source_and_inputs_unchanged": unchanged,
         "timing_scope": "External perf_counter_ns around four mode evaluations and aggregate mean",
-        "excluded": ["imports", "CSV parsing", "state conversion", "provided yaw-rate validation",
+        "excluded": ["imports", "CSV parsing", "CSV-to-keyword state preparation", "provided yaw-rate validation",
                      "yaw-rate estimation (not run)", "warm-up/first compilation", "hashing", "output writes"],
         "all_observations_retained": True,
         "note": "A local benchmark, not the paper's full-data result or a hard real-time guarantee."}

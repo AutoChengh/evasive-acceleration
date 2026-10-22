@@ -14,15 +14,14 @@ concurrency:
 
 env:
   MPLBACKEND: Agg
-  # Hosted Linux runners do not provide Arial. CI checks rendering with an
-  # explicitly allowed fallback; publication figures still require Arial.
+  # Publication figures use Arial; hosted Linux runners allow a CI fallback.
   EA_ALLOW_FONT_FALLBACK: "1"
 
 jobs:
   tests:
-    name: ${{ matrix.os }} / Python ${{ matrix.python }} / no Numba
+    name: ${{ matrix.os }} / Python ${{ matrix.python }} / EA
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -31,119 +30,11 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      EA_EXPECT_NUMBA: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install base and test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,batch,viz]"
-          python -m pip uninstall -y numba llvmlite
-          python -m pip check
-      - name: Check frozen paper sources and unchanged yaw-rate estimator
-        run: python tools/check_core_integrity.py
-      - name: Check frozen v53 source snapshot
-        run: python tools/check_v53_integrity.py
-      - name: Run tests
-        run: python -m pytest -q
-      - name: Run public examples
-        run: |
-          ea --version
-          python examples/provided_state.py
-          python examples/from_history.py
-          ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
-          python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
-          ea benchmark --max-frames 1 --output-dir outputs/ci_benchmark
-      - name: Build source and wheel distributions
-        run: python -m build
-      - name: Smoke-test wheel in an isolated environment
-        run: |
-          python - <<'PY'
-          import math
-          import os
-          from pathlib import Path
-          import subprocess
-          import sys
-          import tempfile
-
-          wheel, = Path("dist").resolve().glob("*.whl")
-          with tempfile.TemporaryDirectory(prefix="ea-wheel-check-") as directory:
-              sandbox = Path(directory)
-              environment = sandbox / "venv"
-              subprocess.run([sys.executable, "-m", "venv", str(environment)], check=True)
-              python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-              subprocess.run([str(python), "-m", "pip", "install", str(wheel)], check=True, cwd=sandbox)
-              check = """
-          import math
-          from pathlib import Path
-          import sys
-          import core_ea
-          import evasive_acceleration as ea
-          from evasive_acceleration import benchmark
-          prefix = Path(sys.prefix).resolve()
-          for module in (core_ea, ea, benchmark):
-              assert Path(module.__file__).resolve().is_relative_to(prefix), module.__file__
-          a = ea.RoadUserState(0, 0, 10, 0, 4.5, 1.8, 0)
-          b = ea.RoadUserState(20, 0, 8, math.pi, 4.7, 1.9, 0)
-          assert math.isclose(ea.compute_ea(a, b), 4.800096523170946, rel_tol=1e-8, abs_tol=1e-8)
-          assert ea.causal_yaw_rate([0, .1], [0, .01]).tolist() == [0., .1]
-          from evasive_acceleration._paper import numerical_solver
-          assert Path(numerical_solver.__file__).resolve().is_relative_to(prefix)
-          from core_ea import get_core_provenance
-          assert get_core_provenance()["core_id"] == "paper-aligned-verified-cv-ctrv-20261020"
-          print("Isolated wheel API and paper-core EA value OK")
-          """
-              subprocess.run([str(python), "-I", "-c", check], check=True, cwd=sandbox)
-              subprocess.run([str(python), "-I", "-m", "evasive_acceleration", "--version"],
-                             check=True, cwd=sandbox)
-              subprocess.run([str(python), "-I", "-m", "evasive_acceleration", "benchmark",
-                              "--max-frames", "1", "--output-dir", str(sandbox / "benchmark")],
-                             check=True, cwd=sandbox)
-          PY
-
-  accelerated:
-    name: Ubuntu / Python 3.12 / Numba
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      EA_EXPECT_NUMBA: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install accelerated implementation
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,batch,viz,fast]"
-          python -m pip check
-      - name: Run identical tests against Numba backend
-        run: python -m pytest -q
-
-  v53:
-    name: ${{ matrix.os }} / Python 3.12 / v53 native
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Prepare Windows GCC-compatible compiler
@@ -157,31 +48,36 @@ jobs:
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: cygpath -w /ucrt64/bin >> "$GITHUB_PATH"
-      - name: Install test and acceleration dependencies
-        run: python -m pip install -e ".[dev,batch,viz,fast]"
-      - name: Check both frozen numerical sources
+      - name: Install EA and test dependencies
         run: |
-          python tools/check_core_integrity.py
-          python tools/check_v53_integrity.py
-      - name: Build native library before any EA timing
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,batch,viz]"
+          python -m pip check
+      - name: Verify unchanged numerical sources and yaw-rate estimator
+        run: |
+          python tools/check_solver_integrity.py
+      - name: Build native library before numerical tests or timing
         run: python -m evasive_acceleration.native_build
-      - name: Run complete API, history, geometry and native suite
+      - name: Run complete API, history, geometry and native regression suite
         run: python -m pytest -q
-      - name: Run v53 public examples and benchmark
+      - name: Run public examples and timing smoke test
         run: |
-          python examples/v53_usage.py
-          ea --backend v53 single
-          ea --backend v53 batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_v53_batch
-          ea --backend v53 benchmark --max-frames 1 --output-dir outputs/ci_v53_benchmark
-      - name: Build and test isolated installed v53 wheel
+          ea --version
+          python examples/provided_state.py
+          python examples/from_history.py
+          ea single
+          ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
+          python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
+          ea benchmark --max-frames 1 --output-dir outputs/ci_benchmark
+      - name: Build and test source and wheel distributions in isolation
         run: |
-          python -m build --outdir outputs/ci_v53_dist
-          python tools/check_v53_wheel.py --wheel-dir outputs/ci_v53_dist
+          python -m build --outdir outputs/ci_dist
+          python tools/check_wheel.py --wheel-dir outputs/ci_dist
 
   notebook:
     name: Execute quickstart notebook
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -191,6 +87,8 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install notebook dependencies and kernel
         run: python -m pip install -e ".[batch,viz,notebook]"
+      - name: Build EA native library before executing examples
+        run: python -m evasive_acceleration.native_build
       - name: Execute every quickstart cell
         run: python tools/execute_quickstart.py --output outputs/notebooks/ea_quickstart.executed.ipynb
       - uses: actions/upload-artifact@v4

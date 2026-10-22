@@ -1,15 +1,11 @@
-"""Explicit, context-local selection of the preserved and v53 EA engines.
+"""The sole EA runtime, with explicit preparation and numerical provenance.
 
-The existing API uses ``paper`` unless the caller opts in with
-``with use_backend("v53")``. Selecting v53 never falls back to the paper grid
-search. Its native library must be built before evaluation; no measured call
-invokes a compiler. Backend selection does not modify the yaw-rate estimator.
+The validated numerical kernels are unchanged. The native library must be
+built before evaluation; no EA call invokes a compiler or another solver.
 """
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from contextvars import ContextVar
 from functools import lru_cache
 import hashlib
 import importlib
@@ -19,12 +15,10 @@ from pathlib import Path
 import threading
 
 
-BACKEND_NAMES = ("paper", "v53")
-V53_CORE_ID = "continuous-certified-v53-20261022"
-_backend: ContextVar[str] = ContextVar("evasive_acceleration_backend", default="paper")
+CORE_ID = "ea-continuous-certified-20261022"
 _native_import_lock = threading.Lock()
 _loaded_native_sha256: dict[Path, str] = {}
-_V53_MODULES = (
+_SOLVER_MODULES = (
     "circle_proposal", "continuous", "continuous_adaptive_cells",
     "continuous_cells", "continuous_compact_kernel", "continuous_native_cells",
     "continuous_parallel", "continuous_penalty_fallback",
@@ -32,45 +26,20 @@ _V53_MODULES = (
     "normalized_refinement", "penalty_safety", "priority_safety",
 )
 
-__all__ = ["BACKEND_NAMES", "get_backend", "use_backend"]
-
-
-def get_backend() -> str:
-    """Return the selected backend in the current thread/async context."""
-    return _backend.get()
-
-
-@contextmanager
-def use_backend(name: str):
-    """Select an EA backend temporarily, restoring it even after an error.
-
-    Existing state, history, CSV and timed APIs all honour this selection.
-    Dependencies are checked when v53 is evaluated, not when importing EA or
-    requesting CLI help. A missing v53 dependency is an explicit error.
-    """
-    if not isinstance(name, str) or name not in BACKEND_NAMES:
-        raise ValueError("backend must be 'paper' or 'v53'")
-    token = _backend.set(name)
-    try:
-        yield
-    finally:
-        _backend.reset(token)
-
-
 @lru_cache(maxsize=1)
-def _get_v53_runtime():
-    """Load the frozen v53 modules only after explicit backend selection."""
+def _get_runtime():
+    """Load the validated kernels lazily, after checking required dependencies."""
     try:
         import numba
     except (ImportError, OSError) as exc:
         raise RuntimeError(
-            'The v53 backend requires Numba. Install the accelerated extras '
-            'with python -m pip install -e ".[fast]", then build the v53 native '
-            'library as described in docs/runtime_v53.md.'
+            'EA requires Numba. Install the package dependencies with '
+            'python -m pip install -e ., then build the native '
+            'library as described in docs/runtime.md.'
         ) from exc
     if numba.config.DISABLE_JIT:
         raise RuntimeError(
-            "The v53 backend requires enabled Numba JIT; unset NUMBA_DISABLE_JIT."
+            "EA requires enabled Numba JIT; unset NUMBA_DISABLE_JIT."
         )
 
     from .native_build import find_native_library
@@ -94,7 +63,7 @@ def _get_v53_runtime():
             )
         except (ImportError, OSError) as exc:
             raise RuntimeError(
-                "Cannot load the v53 native runtime. Rebuild the native library "
+                "Cannot load the EA native runtime. Rebuild the native library "
                 "for this Python/CPU and start a fresh Python process."
             ) from exc
         finally:
@@ -104,7 +73,7 @@ def _get_v53_runtime():
                 os.environ["EA_NATIVE_CELLS_LIBRARY"] = previous
         if Path(native._library_path).resolve() != library_path:
             raise RuntimeError(
-                "A different v53 native library is already loaded. Start a fresh "
+                "A different EA native library is already loaded. Start a fresh "
                 "Python process after selecting EA_NATIVE_CELLS_LIBRARY."
             )
         # Keep the pre-load identity even on a concurrent-replacement error;
@@ -113,7 +82,7 @@ def _get_v53_runtime():
         final_digest = hashlib.sha256(library_path.read_bytes()).hexdigest()
         if final_digest != initial_digest:
             raise RuntimeError(
-                "The v53 native library changed while loading. Start a fresh "
+                "The EA native library changed while loading. Start a fresh "
                 "Python process after restoring/rebuilding the library."
             )
     return adaptive, library_path
@@ -125,7 +94,7 @@ def _check_loaded_native_digest(library_path: Path) -> str:
     original = _loaded_native_sha256.get(library_path)
     if original is not None and digest != original:
         raise RuntimeError(
-            "The v53 native library was replaced after loading. Start a fresh "
+            "The EA native library was replaced after loading. Start a fresh "
             "Python process before recording results or provenance."
         )
     return digest
@@ -137,17 +106,16 @@ def _check_library_override(library_path: Path) -> None:
     if override and override != str(library_path):
         if Path(override).expanduser().resolve() != library_path:
             raise RuntimeError(
-                "EA_NATIVE_CELLS_LIBRARY changed after v53 was loaded. Start a "
+            "EA_NATIVE_CELLS_LIBRARY changed after EA was loaded. Start a "
                 "fresh Python process to use a different native library."
             )
 
 
-def _preflight_backend() -> None:
-    """Check optional runtime dependencies before a CLI/batch creates outputs."""
-    if get_backend() == "v53":
-        _adaptive, library_path = _get_v53_runtime()
-        _check_library_override(library_path)
-        _check_loaded_native_digest(library_path)
+def _preflight_runtime() -> None:
+    """Check required runtime dependencies before a CLI/batch creates outputs."""
+    _adaptive, library_path = _get_runtime()
+    _check_library_override(library_path)
+    _check_loaded_native_digest(library_path)
 
 
 def _effective_yaw(state_values, pair) -> tuple[float, float]:
@@ -156,17 +124,17 @@ def _effective_yaw(state_values, pair) -> tuple[float, float]:
     return tuple(0.0 if abs(rate) < 1e-6 else rate for rate in rates)
 
 
-def compute_v53_modes(state_values, config, pairs=None):
-    """Bridge the unchanged public state/config layout to certified v53.
+def compute_modes(state_values, config, pairs=None):
+    """Bridge the unchanged public state/config layout to EA.
 
     The default 0.001 m/s² path is the frozen, fully benchmarked entry point.
     The public tolerance also reaches the affine CV/CV primitive when callers
     explicitly request another tolerance; legacy grid/direction options remain
-    accepted but do not define v53's continuous-time accuracy.
+    accepted but do not define EA's continuous-time accuracy.
     """
     from ._paper.four_modes import FOUR_PAIRS
 
-    adaptive, library_path = _get_v53_runtime()
+    adaptive, library_path = _get_runtime()
     _check_library_override(library_path)
     selected_pairs = FOUR_PAIRS if pairs is None else tuple(pairs)
     tolerance = float(config.solver_tolerance)
@@ -199,30 +167,33 @@ def compute_v53_modes(state_values, config, pairs=None):
             )
         ):
             raise RuntimeError(
-                "The v53 zero-yaw search is unresolved at the requested "
+                "The EA zero-yaw search is unresolved at the requested "
                 "tolerance; no inaccurate scalar is returned."
             )
         values.update({pair: result.value for pair in zero_pairs})
     return {pair: values[pair] for pair in selected_pairs}
 
 
-def _v53_provenance() -> dict:
+def get_runtime_provenance() -> dict:
     """Hash the actual frozen runtime and native binary, not the old solver."""
-    _adaptive, library_path = _get_v53_runtime()
+    _adaptive, library_path = _get_runtime()
     _check_library_override(library_path)
     native_digest = _check_loaded_native_digest(library_path)
     package = Path(__file__).resolve().parent
     paths = {"_experimental/" + name + ".py":
-             package / "_experimental" / (name + ".py") for name in _V53_MODULES}
+             package / "_experimental" / (name + ".py") for name in _SOLVER_MODULES}
     paths.update({
         "_experimental/native_cells.cpp": package / "_experimental/native_cells.cpp",
-        "backends.py": Path(__file__).resolve(),
+        "runtime.py": Path(__file__).resolve(),
         "native_build.py": package / "native_build.py",
         "core_ea.py": package.parent / "core_ea.py",
     })
+    paths.update({"_paper/" + name: package / "_paper" / name
+                  for name in ("__init__.py", "config.py", "four_modes.py", "numerical_solver.py")})
     return {
-        "core_id": V53_CORE_ID,
-        "backend": "v53",
+        "core_id": CORE_ID,
+        "backend": "EA",
+        "solver": "continuous-time bounded acceleration search",
         "runtime_source_sha256": {
             name: hashlib.sha256(path.read_bytes()).hexdigest()
             for name, path in sorted(paths.items())

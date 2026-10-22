@@ -1,10 +1,10 @@
 """Recompute two synthetic straight-following cases with equal TTC.
 
-Run from a source checkout after installing ``.[viz,fast]``::
+Run from a source checkout after installing ``.[viz]`` and building the native component::
 
     python examples/comparison_case.py --output-dir outputs/comparison_case
 
-The paper-version finite-horizon EA core and historical baseline functions are
+The public EA core and historical baseline functions are
 called with their defaults. These inputs are illustrations, not paper experiment data.
 """
 
@@ -39,10 +39,7 @@ DEFAULT_CASES_CSV = Path(__file__).resolve().parent / "data" / "comparison_cases
 STATE_FIELDS = (
     "x_m", "y_m", "speed_m_s", "heading_rad", "length_m", "width_m", "yaw_rate_rad_s"
 )
-SOLVER_FIELDS = (
-    "coarse_sector_num", "local_fine_half_window_deg", "local_fine_dir_num",
-    "fine_refine_ratio", "a_max", "tol", "T_total", "dt_coarse", "dt_fine", "size_scale",
-)
+SOLVER_FIELDS = ("a_max", "tol", "T_total", "size_scale")
 
 
 def _state(record, prefix: str) -> RoadUserState:

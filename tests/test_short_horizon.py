@@ -1,4 +1,4 @@
-"""Public APIs support endpoint sampling even when a step exceeds the horizon."""
+"""Continuous EA keeps short-horizon geometry despite legacy grid options."""
 
 import math
 
@@ -32,13 +32,13 @@ def test_short_horizon_returns_zero_for_separated_trajectories(options):
 
 def test_step_larger_than_horizon_still_checks_the_final_endpoint():
     agent_a, agent_b = _states(x_b=8.0, speed_a=5.0)
-    # Only 0 and T are sampled. At T=1 the unmodified centres are 3 m apart,
+    # At T=1 the unmodified centres are 3 m apart,
     # so the 4 m vehicles overlap. A magnitude just above 2 m/s^2 is needed
-    # to restore separation; the short grid must not bypass the endpoint.
+    # to restore separation; legacy grid options must not bypass the endpoint.
     options = {"T_total": 1.0, "dt_coarse": 3.0, "dt_fine": 2.0}
     value = compute_ea(agent_a, agent_b, **options)
     assert value > 2.0
-    assert value == pytest.approx(2.0, abs=1e-10)
+    assert value == pytest.approx(2.0, abs=.001)
     assert keyword_compute_ea(**build_compute_kwargs(agent_a, agent_b, **options)) == value
 
 

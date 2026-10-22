@@ -1,7 +1,7 @@
-"""Public opt-in v53 integration without replacing the historical default.
+"""Unique EA integration, independent safety and public provenance checks.
 
-Native tests require an explicitly prebuilt library.  Their assertions concern
-geometry, precision and interface behavior, not host-specific latency claims.
+A prebuilt native library is required. Missing dependencies fail the suite;
+geometry and precision assertions do not impose machine-specific speed gates.
 """
 
 import csv
@@ -13,7 +13,6 @@ from pathlib import Path
 import runpy
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pytest
@@ -28,23 +27,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
-def native_v53():
-    pytest.importorskip("numba", reason="v53 requires the optional fast dependencies")
+def native_ea():
+    import numba
     from evasive_acceleration.native_build import find_native_library
+    from evasive_acceleration.runtime import _get_runtime
 
-    try:
-        find_native_library()
-    except (RuntimeError, FileNotFoundError) as error:
-        pytest.skip(f"Build the optional v53 native library first: {error}")
-    # Enter through the public loader: it resolves the package's versioned
-    # cache and temporarily configures the frozen module's original loader.
-    from evasive_acceleration.backends import _get_v53_runtime
-
-    return _get_v53_runtime()[0]
+    assert not numba.config.DISABLE_JIT, "EA requires enabled Numba JIT"
+    find_native_library()  # Fail, rather than skip, an incomplete native build.
+    return _get_runtime()[0]
 
 
 def _fictional_state():
-    # Published in the independently checked final-v53 example, not private data.
+    # Published in the independently checked EA example, not private data.
     return np.array([0., 0., 8., 0., 4.8, 1.8, .1,
                      20., 1., 4., math.pi, 4.5, 1.8, 0.])
 
@@ -53,93 +47,52 @@ def _users(state):
     return ea.RoadUserState(*state[:7]), ea.RoadUserState(*state[7:])
 
 
-def test_default_backend_and_paper_value_are_preserved():
-    assert ea.get_backend() == "paper"
-    a = ea.RoadUserState(0., 0., 10., 0., 4.5, 1.8, 0.)
-    b = ea.RoadUserState(20., 0., 8., math.pi, 4.7, 1.9, 0.)
-    assert ea.compute_ea(a, b) == pytest.approx(4.800096523170946, abs=1e-10)
-
-
-def test_paper_context_restores_after_nested_context_and_exception():
-    assert ea.get_backend() == "paper"
-    with pytest.raises(LookupError, match="test sentinel"):
-        with ea.use_backend("paper"):
-            with ea.use_backend("paper"):
-                assert ea.get_backend() == "paper"
-                raise LookupError("test sentinel")
-    assert ea.get_backend() == "paper"
-
-
-@pytest.mark.parametrize("invalid", ["v999", "", "V53", None, 53])
-def test_unknown_backend_is_rejected_without_changing_default(invalid):
-    with pytest.raises((ValueError, TypeError)):
-        with ea.use_backend(invalid):
-            pytest.fail("invalid backend accepted")
-    assert ea.get_backend() == "paper"
-
-
-def test_import_and_paper_remain_usable_without_numba(tmp_path):
+def test_missing_numba_fails_explicitly_instead_of_using_an_archived_solver(tmp_path):
     code = """
 import builtins
 original_import = builtins.__import__
 def no_numba(name, *args, **kwargs):
     if name == 'numba' or name.startswith('numba.'):
-        raise ImportError('deliberately absent optional Numba')
+        raise ImportError('deliberately absent Numba')
     return original_import(name, *args, **kwargs)
 builtins.__import__ = no_numba
 import evasive_acceleration as ea
-assert ea.get_backend() == 'paper'
 a = ea.RoadUserState(0, 0, 1, 0, 4, 2, 0)
 b = ea.RoadUserState(0, 30, 1, 0, 4, 2, 0)
-assert ea.compute_ea(a, b) == 0
 try:
-    with ea.use_backend('v53'):
-        ea.compute_ea(a, b)
+    ea.compute_ea(a, b)
 except RuntimeError as error:
-    assert 'numba' in str(error).lower() or 'fast' in str(error).lower(), str(error)
+    assert 'numba' in str(error).lower(), str(error)
 else:
-    raise AssertionError('v53 silently accepted absent required acceleration dependency')
-assert ea.get_backend() == 'paper'
-print('optional dependency isolation OK')
+    raise AssertionError('EA silently accepted a missing numerical dependency')
+print('missing dependency explicitly rejected')
 """
     result = subprocess.run([sys.executable, "-I", "-c", code], cwd=tmp_path,
                             text=True, capture_output=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "optional dependency isolation OK" in result.stdout
+    assert "missing dependency explicitly rejected" in result.stdout
 
 
-def test_native_backend_context_is_nested_and_thread_local(native_v53):
-    with ea.use_backend("v53"):
-        assert ea.get_backend() == "v53"
-        with ea.use_backend("paper"):
-            assert ea.get_backend() == "paper"
-        assert ea.get_backend() == "v53"
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            assert pool.submit(ea.get_backend).result() == "paper"
-    assert ea.get_backend() == "paper"
-
-
-def test_v53_public_dataclass_legacy_and_four_modes_agree(native_v53):
+def test_ea_public_dataclass_legacy_and_four_modes_agree(native_ea):
     state = _fictional_state()
     before = state.copy()
     a, b = _users(state)
-    with ea.use_backend("v53"):
-        kwargs = ea.build_compute_kwargs(a, b)
-        modes = core_ea.compute_ea_modes(**kwargs)
-        score = ea.compute_ea(a, b)
-        assert set(modes) == set(MODE_KEYS)
-        assert score == core_ea.compute_ea(**kwargs)
-        assert score == core_ea.aggregate_ea_modes(modes)
-        assert score == sum(modes[key] for key in MODE_KEYS) / 4.
-        direct = native_v53.compute_selected_modes(state)
-        for key, pair in zip(MODE_KEYS, PAIRS):
-            assert modes[key] == direct[pair]
-        assert score == pytest.approx(1.5366117876437317, abs=.001)
+    kwargs = ea.build_compute_kwargs(a, b)
+    modes = core_ea.compute_ea_modes(**kwargs)
+    score = ea.compute_ea(a, b)
+    assert set(modes) == set(MODE_KEYS)
+    assert score == core_ea.compute_ea(**kwargs)
+    assert score == core_ea.aggregate_ea_modes(modes)
+    assert score == sum(modes[key] for key in MODE_KEYS) / 4.
+    direct = native_ea.compute_selected_modes(state)
+    for key, pair in zip(MODE_KEYS, PAIRS):
+        assert modes[key] == direct[pair]
+    assert score == pytest.approx(1.5366117876437317, abs=.001)
     np.testing.assert_array_equal(state, before)
 
 
 @pytest.mark.parametrize("yaw_rate", [.1, 6.])
-def test_v53_outputs_have_independent_continuous_safety_certificate(native_v53, yaw_rate):
+def test_ea_outputs_have_independent_continuous_safety_certificate(native_ea, yaw_rate):
     from evasive_acceleration._experimental import continuous as independent
 
     state = _fictional_state()
@@ -147,7 +100,7 @@ def test_v53_outputs_have_independent_continuous_safety_certificate(native_v53, 
     if yaw_rate > 5.:
         # A clearly separated spinning body exercises native dispatch cheaply.
         state[2], state[7], state[8], state[9] = 0., 0., 30., 0.
-    results = native_v53.compute_selected_modes_with_diagnostics(state)
+    results = native_ea.compute_selected_modes_with_diagnostics(state)
     for pair, result in results.items():
         assert result.continuous_verified and result.angular_converged
         assert 0. <= result.value - result.lower_bound <= .001 + 1e-12
@@ -160,7 +113,7 @@ def test_v53_outputs_have_independent_continuous_safety_certificate(native_v53, 
         assert status == 1, (pair, result, witness)
 
 
-def test_v53_causal_history_and_provided_yaw_rate_remain_equivalent(native_v53):
+def test_ea_causal_history_and_provided_yaw_rate_remain_equivalent(native_ea):
     a = ea.RoadUserKinematicState(0., 0., 8., .02, 4.8, 1.8)
     b = ea.RoadUserKinematicState(20., 1., 4., math.pi, 4.5, 1.8)
     times = [0., .1, .2]
@@ -168,42 +121,39 @@ def test_v53_causal_history_and_provided_yaw_rate_remain_equivalent(native_v53):
     provided_a, estimate = ea.build_state_with_estimated_yaw_rate(a, times, headings_a)
     provided_b, _ = ea.build_state_with_estimated_yaw_rate(b, times, headings_b)
     assert estimate.initialized and provided_a.yaw_rate == .1
-    with ea.use_backend("v53"):
-        history = ea.compute_single_frame_ea_from_heading_histories(
-            a, times, headings_a, b, times, headings_b,
-        )
-        assert history == ea.compute_ea(provided_a, provided_b)
+    history = ea.compute_single_frame_ea_from_heading_histories(
+        a, times, headings_a, b, times, headings_b,
+    )
+    assert history == ea.compute_ea(provided_a, provided_b)
     complete = ea.causal_yaw_rate(times + [.3], headings_a + [1.7])
     np.testing.assert_array_equal(ea.causal_yaw_rate(times, headings_a), complete[:3])
 
 
-def test_v53_catches_contact_between_old_time_samples(native_v53):
+def test_ea_catches_contact_between_old_time_samples(native_ea):
     a = ea.RoadUserState(0., 0., 1., 0., .004, .004, 0.)
     b = ea.RoadUserState(.01, -.01, 1., math.pi / 2., .004, .004, 0.)
-    with ea.use_backend("v53"):
-        coarse = ea.compute_ea(a, b, T_total=.02, dt_coarse=.02, dt_fine=.02)
-        fine = ea.compute_ea(a, b, T_total=.02, dt_coarse=.01, dt_fine=.001)
+    coarse = ea.compute_ea(a, b, T_total=.02, dt_coarse=.02, dt_fine=.02)
+    fine = ea.compute_ea(a, b, T_total=.02, dt_coarse=.01, dt_fine=.001)
     assert math.isfinite(coarse) and coarse > 0.
     assert abs(coarse - fine) <= .001
 
 
-def test_v53_rejects_invalid_states_and_options_through_existing_api(native_v53):
+def test_ea_rejects_invalid_states_and_options_through_existing_api(native_ea):
     good = ea.RoadUserState(0., 30., 1., 0., 4., 2., 0.)
-    with ea.use_backend("v53"):
-        for bad in (ea.RoadUserState(0., 0., -1., 0., 4., 2., 0.),
-                    ea.RoadUserState(0., 0., 1., 0., 0., 2., 0.),
-                    ea.RoadUserState(math.nan, 0., 1., 0., 4., 2., 0.)):
-            with pytest.raises(ValueError):
-                ea.compute_ea(bad, good)
-        for tolerance in (0., math.nan, math.inf):
-            with pytest.raises(ValueError):
-                ea.compute_ea(good, good, tol=tolerance)
-        kwargs = ea.build_compute_kwargs(good, good)
-        kwargs["yawA"] = math.nan
-        assert math.isnan(core_ea.compute_ea(**kwargs))
+    for bad in (ea.RoadUserState(0., 0., -1., 0., 4., 2., 0.),
+                ea.RoadUserState(0., 0., 1., 0., 0., 2., 0.),
+                ea.RoadUserState(math.nan, 0., 1., 0., 4., 2., 0.)):
+        with pytest.raises(ValueError):
+            ea.compute_ea(bad, good)
+    for tolerance in (0., math.nan, math.inf):
+        with pytest.raises(ValueError):
+            ea.compute_ea(good, good, tol=tolerance)
+    kwargs = ea.build_compute_kwargs(good, good)
+    kwargs["yawA"] = math.nan
+    assert math.isnan(core_ea.compute_ea(**kwargs))
 
 
-def test_v53_tighter_tolerance_is_respected_for_zero_yaw(native_v53, monkeypatch):
+def test_ea_tighter_tolerance_is_respected_for_zero_yaw(native_ea, monkeypatch):
     from evasive_acceleration._experimental import continuous_parallel as preserved
 
     original = preserved.solve_pair
@@ -217,9 +167,8 @@ def test_v53_tighter_tolerance_is_respected_for_zero_yaw(native_v53, monkeypatch
     monkeypatch.setattr(preserved, "solve_pair", record_budget)
     a = ea.RoadUserState(0., 0., 8., 0., 4.8, 1.8, 0.)
     b = ea.RoadUserState(20., 1., 4., math.pi, 4.5, 1.8, 0.)
-    with ea.use_backend("v53"):
-        normal = ea.compute_ea(a, b, tol=.001)
-        tighter = ea.compute_ea(a, b, tol=.0001)
+    normal = ea.compute_ea(a, b, tol=.001)
+    tighter = ea.compute_ea(a, b, tol=.0001)
     assert normal > 0. and tighter > 0.
     assert abs(normal - tighter) <= .001
     tightened = [result for tolerance, result in observed if tolerance == .0001]
@@ -237,16 +186,16 @@ def test_native_cpp_is_available_as_package_resource():
     assert "ea_cells_native_solve_seeded" in source.read_text(encoding="utf-8")
 
 
-def test_packaged_v53_sources_match_independently_validated_snapshot():
-    checker = runpy.run_path(str(ROOT / "tools" / "check_v53_integrity.py"))
-    assert checker["check_v53_integrity"]() == []
+def test_packaged_ea_sources_match_independently_validated_snapshot():
+    checker = runpy.run_path(str(ROOT / "tools" / "check_solver_integrity.py"))
+    assert checker["check_solver_integrity"]() == []
 
 
-def _assert_active_v53_provenance(provenance):
-    from evasive_acceleration.backends import V53_CORE_ID
+def _assert_active_ea_provenance(provenance):
+    from evasive_acceleration.runtime import CORE_ID
 
-    assert provenance["core_id"] == V53_CORE_ID
-    assert provenance["backend"] == "v53"
+    assert provenance["core_id"] == CORE_ID
+    assert provenance["backend"] == "EA"
     hashes = provenance["runtime_source_sha256"]
     assert "_experimental/continuous_adaptive_cells.py" in hashes
     assert "_experimental/native_cells.cpp" in hashes
@@ -265,14 +214,14 @@ def _run_cli(*arguments, cwd, env=None):
                           encoding="utf-8", timeout=180)
 
 
-def test_v53_cli_benchmark_records_actual_core_and_source_binary_hashes(native_v53, tmp_path):
-    output = tmp_path / "v53 benchmark"
-    result = _run_cli("--backend", "v53", "benchmark", "--max-frames", "1",
+def test_ea_cli_benchmark_records_actual_core_and_source_binary_hashes(native_ea, tmp_path):
+    output = tmp_path / "EA benchmark"
+    result = _run_cli("benchmark", "--max-frames", "1",
                       "--warmup", "1", "--repeats", "1", "--output-dir", str(output),
                       cwd=tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     summary = json.loads((output / "benchmark_summary.json").read_text(encoding="utf-8"))
-    _assert_active_v53_provenance(summary["core_provenance"])
+    _assert_active_ea_provenance(summary["core_provenance"])
     assert summary["core_id"] == summary["core_provenance"]["core_id"]
     assert summary["passed"] and summary["source_and_inputs_unchanged"]
     assert summary["calls"] == summary["unique_frames"] == 1
@@ -284,20 +233,20 @@ def test_v53_cli_benchmark_records_actual_core_and_source_binary_hashes(native_v
         assert summary["source_sha256"][key] == value
 
 
-def test_v53_cli_batch_records_backend_and_causal_yaw_provenance(native_v53, tmp_path):
+def test_ea_cli_batch_records_backend_and_causal_yaw_provenance(native_ea, tmp_path):
     source = ROOT / "examples" / "data" / "without_yaw_rate.csv"
     before = source.read_bytes()
-    output = tmp_path / "v53 batch"
-    result = _run_cli("batch", "--backend", "v53", "--input", str(source),
+    output = tmp_path / "EA batch"
+    result = _run_cli("batch", "--input", str(source),
                       "--yaw-rate-source", "estimated", "--skip-baselines",
                       "--output-dir", str(output), cwd=tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     metadata_files = list(output.glob("*.run.json"))
     assert len(metadata_files) == 1
     metadata = json.loads(metadata_files[0].read_text(encoding="utf-8"))
-    _assert_active_v53_provenance(metadata["core_provenance"])
+    _assert_active_ea_provenance(metadata["core_provenance"])
     assert metadata["core_id"] == metadata["core_provenance"]["core_id"]
-    assert metadata["backend"] == "v53"
+    assert metadata["backend"] == "EA"
     assert metadata["requested_yaw_rate_source"] == "estimated"
     assert metadata["input_sha256"] == hashlib.sha256(before).hexdigest()
     assert metadata["statistics"]["computation_failed_frames"] == 0
@@ -315,13 +264,13 @@ def test_v53_cli_batch_records_backend_and_causal_yaw_provenance(native_v53, tmp
     assert source.read_bytes() == before
 
 
-def test_v53_cli_batch_missing_native_fails_before_creating_outputs(native_v53, tmp_path):
+def test_ea_cli_batch_missing_native_fails_before_creating_outputs(native_ea, tmp_path):
     source = ROOT / "examples" / "data" / "without_yaw_rate.csv"
     before = source.read_bytes()
     output = tmp_path / "must not be created"
     environment = os.environ.copy()
     environment["EA_NATIVE_CELLS_LIBRARY"] = str(tmp_path / "missing library.dll")
-    result = _run_cli("--backend", "v53", "batch", "--input", str(source),
+    result = _run_cli("batch", "--input", str(source),
                       "--skip-baselines", "--output-dir", str(output),
                       cwd=tmp_path, env=environment)
     assert result.returncode != 0
@@ -332,7 +281,7 @@ def test_v53_cli_batch_missing_native_fails_before_creating_outputs(native_v53, 
     assert source.read_bytes() == before
 
 
-def test_v53_benchmark_warms_every_selected_input_before_any_measurement(tmp_path, monkeypatch):
+def test_ea_benchmark_warms_every_selected_input_before_any_measurement(tmp_path, monkeypatch):
     from evasive_acceleration import benchmark
 
     cases = [{"source_file": f"synthetic:{index}", "csv_row": "",
@@ -344,13 +293,13 @@ def test_v53_benchmark_warms_every_selected_input_before_any_measurement(tmp_pat
         return dict.fromkeys(MODE_KEYS, 0.), 0.
 
     # Isolate scheduling from the expensive solver so this regression also
-    # runs in the deliberately no-Numba CI jobs.
+    # exercises scheduling independently of numerical execution.
     monkeypatch.setattr(benchmark, "_demo_cases", lambda horizon: cases)
     monkeypatch.setattr(benchmark, "_evaluate", evaluate)
     monkeypatch.setattr(benchmark, "_environment", lambda: {})
     monkeypatch.setattr(benchmark, "_source_hashes", lambda: {"core_ea.py": "stable"})
     monkeypatch.setattr(core_ea, "get_core_provenance", lambda: {
-        "core_id": "test-v53", "backend": "v53",
+        "core_id": "test-EA", "backend": "EA",
     })
     output = tmp_path / "fully warmed benchmark"
     assert benchmark.main(["--warmup", "1", "--repeats", "1",

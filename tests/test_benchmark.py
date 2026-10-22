@@ -158,8 +158,8 @@ def test_repeat_count_and_input_hash_are_recorded(tmp_path, monkeypatch):
     result = json.loads((output / "benchmark_summary.json").read_text())
     assert result["unique_frames"] == 1 and result["calls"] == 2 and result["repeats"] == 2
     assert result["inputs"][0]["sha256"] == hashlib.sha256(before).hexdigest()
-    assert "_paper/motion.py" in result["source_sha256"]
-    assert "_paper/verified_solver.py" in result["source_sha256"]
+    assert "_experimental/continuous_adaptive_cells.py" in result["source_sha256"]
+    assert "_experimental/native_cells.cpp" in result["source_sha256"]
     assert path.read_bytes() == before
 
 
@@ -203,10 +203,11 @@ def test_invalid_options_exit_before_computation(flag, value):
     assert exc.value.code == 2
 
 
-def test_current_core_matches_public_numerical_example():
+def test_current_core_matches_public_numerical_example(aligned_straight_ea_infimum):
     modes, score = benchmark._evaluate(benchmark._demo_cases(10)[0]["kwargs"])
     assert set(modes) == set(benchmark.MODE_KEYS)
-    assert score == pytest.approx(4.800096523170946, rel=1e-8, abs=1e-8)
+    exact = aligned_straight_ea_infimum(20. - (4.5 + 4.7) / 2., (1.8 + 1.9) / 2., 18.)
+    assert -1e-8 <= score - exact <= .001 + 1e-12
 
 
 def test_installed_cli_forwards_benchmark_help(tmp_path):
@@ -216,10 +217,19 @@ def test_installed_cli_forwards_benchmark_help(tmp_path):
     assert "--input-dir" in process.stdout and "--warmup" in process.stdout
 
 
-def test_aggregate_large_cohort_summary_is_not_a_replay_replacement():
-    source = Path(__file__).resolve().parents[1] / "docs/data/runtime_20261020_summary.json"
+def test_frozen_large_cohort_and_adapter_evidence_are_separately_reported():
+    source = Path(__file__).resolve().parents[1] / "docs/data/ea_acceptance_20261022.json"
     result = json.loads(source.read_text())
-    assert result["unique_frames"] == 857820
-    assert result["total_EA_calls"] == 2 * result["unique_frames"]
-    assert result["primary_measurements_replaced_with_selected_replays"] is False
-    assert result["verified"]["max_ms"] > result["separate_over15ms_diagnostic"]["max_ms"]
+    frozen = result["frozen_acceptance"]
+    integration = result["public_adapter_integration"]
+    assert frozen["raw_frames"] == 857820
+    assert frozen["warmup_calls_excluded"] == 5993
+    assert 0. < frozen["mean_ms"] < frozen["p95_ms"] < frozen["p99_ms"] < frozen["max_ms"]
+    assert frozen["max_ms"] < 20. and frozen["over_20ms"] == 0
+    assert frozen["errors"] == frozen["nan_frames"] == 0
+    assert frozen["global_bracket_tolerance_mps2"] == .001
+    assert frozen["max_finite_reference_difference_mps2"] <= .001
+    assert integration["mode_comparisons"] == integration["independent_continuous_checks_passed"]
+    assert integration["exact_adapter_identity"] is True
+    assert integration["max_absolute_adapter_difference_mps2"] == 0.
+    assert "Raw inputs and historical observations were not replaced" in result["note"]

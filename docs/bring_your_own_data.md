@@ -8,7 +8,8 @@ estimator and output diagnostics. No EA solver settings or geometry are changed.
 Install from the repository root:
 
 ```bash
-python -m pip install -e ".[batch,fast]"
+python -m pip install -e ".[batch]"
+python -m evasive_acceleration.native_build
 ```
 
 ## Input contract

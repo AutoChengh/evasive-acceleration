@@ -1,4 +1,4 @@
-"""Non-destructive optional-native build and discovery regression checks."""
+"""Non-destructive native build and discovery regression checks."""
 
 import hashlib
 import json

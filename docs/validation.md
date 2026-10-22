@@ -1,41 +1,46 @@
 # Validation and reproducibility
 
-The current EA core evaluates four CV/CTRV pairings using the paper's motion
-and collision geometry, finite-horizon search, fine-grid candidate verification,
-and arithmetic aggregation. This page identifies the checks and how to run
-them. Earlier measurements remain in the [validation history](validation_history.md).
+All supported entry points use the same EA numerical core. This page describes
+current checks; older implementations are available only through the
+[historical archives](history.md).
 
 ## Run the tests
 
 ```bash
-python -m pip install -e ".[dev,batch,viz,fast]"
-python tools/check_core_integrity.py
+python -m pip install -e ".[dev,batch,viz]"
+python -m evasive_acceleration.native_build
+python tools/check_solver_integrity.py
 python -m pytest -q
-python -m build
+python -m build --outdir outputs/package_check_dist
+python tools/check_wheel.py --wheel-dir outputs/package_check_dist
 ```
 
-For a NumPy-only check, use a separate environment without the `fast` extra
-and without an existing Numba installation. Omitting an extra does not remove
-packages already installed in an environment.
+Numba and the explicitly built native library are required. Missing native
+dependencies are errors, not a request to use another solver. See
+[native setup](runtime.md#prepare-the-native-component).
 
 The suite checks:
 
-- Independent reference cases, fine-grid contact checks, boundary cases, short
-  horizons, and all four components plus their aggregate.
+- Numerical reference cases, independent continuous-time body-contact
+  verification, global objective bounds, boundary cases and invariances.
+- The four CV/CTRV components and arithmetic-mean score through the public API.
 - Causal yaw-rate estimation, prefix consistency, irregular sampling, track
-  resets, initialization, and recovery from invalid observations.
-- Installed imports, single-frame and batch commands, error messages, input
-  preservation, output protection, and run metadata.
-- Recomputable comparisons, custom-column conversion, notebook structure, and
+  resets, initialization and invalid-observation recovery.
+- Installed imports, single-frame/batch commands, input preservation, output
+  protection, error messages and run metadata.
+- Recomputable comparisons, custom-column conversion, notebook execution and
   regular Arial publication typography.
-- Benchmark input validation, warm-up exclusion, complete timing retention,
-  numerical status reporting, and fresh-output protection.
+- Benchmark input validation, complete timing retention, excluded warm-up,
+  numerical statuses and fresh-output protection.
 
-Frozen reference modules, the historical baseline implementation, and the
-causal yaw-rate estimator are protected by source-integrity checks. CRLF is
-normalized to LF for those checks; other source content is not normalized.
-The current runtime is in `verified_calculator.py` and `verified_solver.py`;
-the original calculator remains available as a separate reference.
+Source-integrity checks protect the numerical sources, historical baseline
+functions and causal yaw-rate estimator. Line endings are normalized for
+those checks; other source content is not normalized.
+
+Use a fresh build directory. The package check installs both the wheel and
+source distribution in separate clean environments, builds their native
+resources, and runs outside the checkout so editable imports cannot hide
+missing files.
 
 ## Check the examples
 
@@ -46,60 +51,35 @@ ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-di
 python examples/comparison_case.py --output-dir outputs/check_comparison
 ```
 
-The provided-state example should print about `4.800 m/s^2`. The two synthetic
-equal-TTC cases give about `0.500` and `0.871 m/s²`, both with TTC `2.00 s`.
-They illustrate the calculation; they are not data from the paper experiments.
+The provided-state example prints approximately `4.911 m/s^2`. The two
+synthetic equal-TTC cases produce approximately `0.500` and `0.886 m/s²`,
+both with TTC `2.00 s`. They are interface illustrations, not paper data.
+The Python API retains full precision; batch EA columns are rounded to four
+decimals after aggregation from unrounded components.
 
-Publication exports require regular Arial. If it is not installed, point
-`EA_ARIAL_FONT_PATH` to a legitimately available regular Arial font. Explicit
-font fallback is available for labelled previews and hosted CI only; see
-[figure style](figure_style.md).
+Publication exports require regular Arial. Point `EA_ARIAL_FONT_PATH` to a
+licensed regular Arial font if needed. Explicit font fallback is for labelled
+previews/hosted CI only; see [figure style](figure_style.md).
 
-## Measure runtime
+## Runtime and notebook
 
 ```bash
 ea benchmark
 ea benchmark --input examples/data/provided.csv --output-dir outputs/check_runtime
-```
-
-The command uses the existing EA core and requires no CSV or plotting extras.
-Its default is a three-state synthetic smoke test. Supply your own CSV or CSV
-directory to measure a relevant workload. It saves every measured call and
-records warm-up separately, along with parameters, source hashes, input hashes,
-and the execution environment. See [runtime measurements](runtime.md) for
-the timing boundary and the separate 857,820-frame implementation check.
-
-## Reproduce a source comparison
-
-For a numerical and performance comparison against an independently preserved
-earlier implementation:
-
-```bash
-python tools/validate_paper_alignment.py --before-source /path/to/before/src --frames 403 --repeats 3 --diagnostic-scenes 64 --output-dir outputs/check_alignment
-```
-
-The report checks each component and the aggregate, source identity, inputs,
-classification changes, and candidate contact verification. A speed comparison
-does not establish numerical equivalence. Input yaw rates must also match:
-re-estimating them from headings changes the input experiment, not just the
-implementation under comparison.
-
-The Python API retains full precision. Batch exports round EA columns to four
-decimal places after computing the aggregate from unrounded components.
-
-## Notebook and installed package
-
-```bash
 python -m pip install -e ".[notebook]"
 python tools/execute_quickstart.py --output outputs/notebooks/quickstart.executed.ipynb
 ```
 
-The notebook calls the same API and example scripts. It is not an independent
-EA implementation. Keep executed notebooks and generated outputs outside the
-tracked, output-free quickstart.
+The benchmark records every measured call, excluded warm-up, settings,
+source/input hashes and environment. Its no-input default is a synthetic
+three-state smoke test. The [runtime guide](runtime.md) defines the timer
+and reports the frozen 857,820-frame experiment separately.
 
-GitHub Actions defines Linux/Windows and Python 3.10/3.12 checks, separate
-accelerated execution, wheel isolation, example execution, and a notebook job.
-Local test results are not evidence that hosted CI has passed a new revision.
-The [workflow](../.github/workflows/tests.yml) and retained
-[historical records](validation_history.md) describe those checks in detail.
+The output-free notebook calls the same API and example scripts, not an
+independent EA implementation. Keep executed notebooks and generated outputs
+outside the tracked source.
+
+GitHub Actions checks Linux/Windows, supported Python versions, native execution,
+isolated wheel installation, examples and notebook execution. Local success
+does not establish that hosted tests passed a new revision; inspect the
+[workflow and its runs](../.github/workflows/tests.yml) for that commit.

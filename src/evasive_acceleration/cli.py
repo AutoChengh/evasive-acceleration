@@ -7,18 +7,17 @@ import sys
 from typing import Sequence
 
 from . import __version__
-from .backends import BACKEND_NAMES, get_backend, use_backend, _preflight_backend
+from .runtime import _preflight_runtime
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Select an optional backend and forward the unchanged workflow options."""
+    """Run the sole EA implementation with the existing workflow options."""
     arguments = list(sys.argv[1:] if argv is None else argv)
-    selector = argparse.ArgumentParser(prog="ea", add_help=False)
-    selector.add_argument("--backend", choices=BACKEND_NAMES)
-    selection, workflow_arguments = selector.parse_known_args(arguments)
+    if "--backend" in arguments or any(value.startswith("--backend=") for value in arguments):
+        print("ea: error: --backend was removed; current EA has one implementation. See docs/history.md for archived code.", file=sys.stderr)
+        return 2
     try:
-        with use_backend(selection.backend or get_backend()):
-            return _dispatch(workflow_arguments)
+        return _dispatch(arguments)
     except RuntimeError as exc:
         print(f"ea: error: {exc}", file=sys.stderr)
         return 2
@@ -32,18 +31,14 @@ def _dispatch(arguments: list[str]) -> int:
         epilog="Use 'ea single --help', 'ea batch --help', or 'ea benchmark --help'.",
     )
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument(
-        "--backend", choices=BACKEND_NAMES,
-        help="Explicit solver selection; default: paper. v53 requires its native build.",
-    )
     parser.add_argument("command", choices=("single", "batch", "benchmark"), nargs="?")
 
-    # In particular, do not let a missing v53 installation be swallowed by
+    # Do not let a missing native runtime be swallowed by
     # the CSV workflow's per-row error handling and become a file of NaNs.
     # Help/version remain available without optional runtime dependencies.
     if (arguments and arguments[0] in ("single", "batch", "benchmark")
             and not any(value in ("-h", "--help") for value in arguments[1:])):
-        _preflight_backend()
+        _preflight_runtime()
 
     # Delegate before parsing so each workflow owns its --help and options.
     if arguments and arguments[0] == "single":

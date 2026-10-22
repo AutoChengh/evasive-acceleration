@@ -25,3 +25,7 @@ def test_notebook_is_portable_clean_and_reuses_the_public_workflows():
         assert name in source
     assert "synthetic" in source.lower()
     assert "collision probability" in source.lower()
+    assert "_paper/" not in source
+    assert "evasive-acceleration-v2" not in source
+    assert "use_backend" not in source and "--backend" not in source
+    assert "runtime.py" in source and "native_build.py" in source

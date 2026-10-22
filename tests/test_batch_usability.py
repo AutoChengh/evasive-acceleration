@@ -241,11 +241,12 @@ def test_appending_future_frames_does_not_change_yawrate_prefix(tmp_path):
         np.testing.assert_array_equal(prefix[column], full[column].iloc[:3])
 
 
-def test_batch_preserves_the_paper_core_single_frame_value(tmp_path):
+def test_batch_preserves_the_ea_core_single_frame_value(tmp_path, aligned_straight_ea_infimum):
     agent_a = RoadUserState(0.0, 0.0, 10.0, 0.0, 4.5, 1.8, 0.0)
     agent_b = RoadUserState(20.0, 0.0, 8.0, math.pi, 4.7, 1.9, 0.0)
     original_value = compute_single_frame_ea(agent_a, agent_b)
-    assert original_value == pytest.approx(4.800096523170946, abs=1e-10)
+    exact = aligned_straight_ea_infimum(20. - (4.5 + 4.7) / 2., (1.8 + 1.9) / 2., 18.)
+    assert -1e-8 <= original_value - exact <= .001 + 1e-12
     data = _frames(1)
     data.loc[0, [
         "Position X (m)", "Position Y (m)", "Velocity (m/s)", "Heading",

@@ -1,4 +1,4 @@
-"""Build the optional v53 native library explicitly, never during EA timing.
+"""Build the EA native library explicitly, never during EA timing.
 
 The C++ source is shipped in wheels and source distributions. A pre-existing
 GCC-compatible C++17 compiler is required; this module installs no software.
@@ -30,7 +30,7 @@ def default_library_path(*, native: bool = False) -> Path:
     """Return a versioned user-cache path, not a checkout-relative binary."""
     source = native_source_path()
     if not source.is_file():
-        raise RuntimeError("v53 C++ source is missing; reinstall the complete package")
+        raise RuntimeError("EA C++ source is missing; reinstall the complete package")
     if sys.platform == "win32":
         cache = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local")))
         suffix = ".dll"
@@ -39,7 +39,7 @@ def default_library_path(*, native: bool = False) -> Path:
         suffix = ".dylib" if sys.platform == "darwin" else ".so"
     flavor = "native" if native else "portable"
     machine = platform.machine().replace("/", "_").replace("\\", "_")
-    return (cache / "evasive-acceleration" / "v53" / _sha256(source)[:20]
+    return (cache / "evasive-acceleration" / "continuous" / _sha256(source)[:20]
             / f"{sys.platform}-{machine}-{flavor}" / ("libea_cells" + suffix))
 
 
@@ -64,8 +64,8 @@ def find_native_library() -> Path:
             except (OSError, ValueError, KeyError):
                 pass
     raise RuntimeError(
-        "v53 native library is not built. Run 'python -m "
-        "evasive_acceleration.native_build' before selecting v53. "
+        "EA native library is not built. Run 'python -m "
+        "evasive_acceleration.native_build' before computing EA. "
         "Incomplete or changed cache artifacts are not accepted. For a custom "
         "build, use a fresh --output path and set EA_NATIVE_CELLS_LIBRARY to it."
     )
@@ -79,7 +79,7 @@ def build_native_library(output=None, compiler: str = "g++", native: bool = Fals
     """
     source = native_source_path()
     if not source.is_file():
-        raise RuntimeError(f"Missing v53 native source: {source}")
+        raise RuntimeError(f"Missing EA native source: {source}")
     target = (Path(output).expanduser().resolve() if output is not None
               else default_library_path(native=native))
     manifest = target.with_suffix(target.suffix + ".build.json")
@@ -129,7 +129,7 @@ def build_native_library(output=None, compiler: str = "g++", native: bool = Fals
             if abi_values[name] != 1:
                 raise RuntimeError(f"Unexpected native ABI: {name}={abi_values[name]}")
         record = {
-            "version": "v53", "source_sha256": source_hash,
+            "version": "EA", "source_sha256": source_hash,
             "output_sha256": _sha256(target), "command": command,
             "compiler": subprocess.check_output([executable, "--version"], text=True),
             "platform": platform.platform(), "machine": platform.machine(),

@@ -7,7 +7,7 @@ This module is intended for real-time or instant-evaluation use cases, where
 the user wants to input the current instantaneous states of two road users and
 obtain the EA value for that single frame immediately.
 
-It uses the paper-aligned finite-horizon solver through ``core_ea.py`` and provides:
+It uses continuous-time EA through ``core_ea.py`` and provides:
     - a clean dataclass-based state interface;
     - basic input validation;
     - a minimal command-line interface;

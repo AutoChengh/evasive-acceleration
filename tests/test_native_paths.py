@@ -1,10 +1,11 @@
-"""Native path handling must work on the first v53 load, not just a cached one.
+"""Native path handling must work on the first EA load, not just a cached one.
 
 The real-library cases use isolated interpreters so an earlier successful
 absolute-path import cannot hide failures in relative, tilde or empty paths.
-The guard and failed-import tests also run without optional Numba/native builds.
+The guard and failed-import tests also run without Numba/native builds.
 """
 
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -13,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from evasive_acceleration import backends
+from evasive_acceleration import runtime
 
 
 ENVIRONMENT_KEY = "EA_NATIVE_CELLS_LIBRARY"
@@ -47,15 +48,36 @@ def _set_path_form(monkeypatch, tmp_path, form):
 def test_loaded_library_guard_accepts_equivalent_path_spellings(monkeypatch, tmp_path, form):
     library = _set_path_form(monkeypatch, tmp_path, form)
     previous = (ENVIRONMENT_KEY in os.environ, os.environ.get(ENVIRONMENT_KEY))
-    backends._check_library_override(library)
+    runtime._check_library_override(library)
     assert (ENVIRONMENT_KEY in os.environ, os.environ.get(ENVIRONMENT_KEY)) == previous
 
 
 def test_loaded_library_guard_still_rejects_a_different_explicit_path(monkeypatch, tmp_path):
     library = _set_path_form(monkeypatch, tmp_path, "absolute")
     monkeypatch.setenv(ENVIRONMENT_KEY, str(tmp_path / "another library.dll"))
-    with pytest.raises(RuntimeError, match="changed after v53 was loaded"):
-        backends._check_library_override(library)
+    with pytest.raises(RuntimeError, match="changed after EA was loaded"):
+        runtime._check_library_override(library)
+
+
+def test_loaded_binary_digest_accepts_identical_bytes_without_relabeling(monkeypatch, tmp_path):
+    library = tmp_path / "not loaded digest fixture.dll"
+    library.write_bytes(b"validated bytes; not a real binary")
+    expected = hashlib.sha256(library.read_bytes()).hexdigest()
+    monkeypatch.setitem(runtime._loaded_native_sha256, library, expected)
+    assert runtime._check_loaded_native_digest(library) == expected
+    assert runtime._loaded_native_sha256[library] == expected
+
+
+def test_loaded_binary_digest_rejects_replaced_file_without_refreshing_identity(monkeypatch, tmp_path):
+    # Never overwrite a mapped Windows DLL; a harmless file isolates the guard.
+    library = tmp_path / "not loaded digest fixture.dll"
+    library.write_bytes(b"validated bytes; not a real binary")
+    expected = hashlib.sha256(library.read_bytes()).hexdigest()
+    monkeypatch.setitem(runtime._loaded_native_sha256, library, expected)
+    library.write_bytes(b"unexpected replacement bytes")
+    with pytest.raises(RuntimeError, match="replaced after loading"):
+        runtime._check_loaded_native_digest(library)
+    assert runtime._loaded_native_sha256[library] == expected
 
 
 @pytest.mark.parametrize("form", ("unset", "empty", "relative", "tilde"))
@@ -76,28 +98,24 @@ def test_failed_frozen_import_restores_exact_native_environment(monkeypatch, tmp
         config=SimpleNamespace(DISABLE_JIT=False),
     ))
     monkeypatch.setattr(native_build, "find_native_library", lambda: library)
-    monkeypatch.setattr(backends.importlib, "import_module", fail_import)
-    backends._get_v53_runtime.cache_clear()
+    monkeypatch.setattr(runtime.importlib, "import_module", fail_import)
+    runtime._get_runtime.cache_clear()
     try:
-        with pytest.raises(RuntimeError, match="Cannot load the v53 native runtime"):
-            backends._get_v53_runtime()
+        with pytest.raises(RuntimeError, match="Cannot load the EA native runtime"):
+            runtime._get_runtime()
         assert observed == [str(library)]
         assert (ENVIRONMENT_KEY in os.environ, os.environ.get(ENVIRONMENT_KEY)) == previous
     finally:
-        backends._get_v53_runtime.cache_clear()
+        runtime._get_runtime.cache_clear()
 
 
 @pytest.fixture
 def native_library():
-    numba = pytest.importorskip("numba", reason="v53 requires optional fast dependencies")
-    if numba.config.DISABLE_JIT:
-        pytest.skip("v53 requires enabled Numba JIT")
+    import numba
+    assert not numba.config.DISABLE_JIT, "EA requires enabled Numba JIT"
     from evasive_acceleration.native_build import find_native_library
 
-    try:
-        return find_native_library()
-    except (RuntimeError, FileNotFoundError) as error:
-        pytest.skip(f"Build the optional v53 native library first: {error}")
+    return find_native_library()  # A missing build fails numerical coverage.
 
 
 _FRESH_LOAD_CODE = r'''
@@ -110,7 +128,7 @@ import shutil
 import sys
 
 import evasive_acceleration as ea
-from evasive_acceleration import backends, native_build
+from evasive_acceleration import runtime, native_build
 
 form, original, sandbox = sys.argv[1:]
 original, sandbox = Path(original), Path(sandbox)
@@ -154,19 +172,16 @@ else:
     }[form]
 
 before = (key in os.environ, os.environ.get(key))
-assert ea.get_backend() == "paper"
 assert not any(name.endswith(".continuous_native_cells") for name in sys.modules)
 a = ea.RoadUserState(0., 0., 8., 0., 4.8, 1.8, .1)
 b = ea.RoadUserState(20., 1., 4., math.pi, 4.5, 1.8, 0.)
-with ea.use_backend("v53"):
-    adaptive, loaded = backends._get_v53_runtime()
-    assert loaded == library.resolve(), (loaded, library)
-    assert (key in os.environ, os.environ.get(key)) == before
-    first = ea.compute_ea(a, b)
-    assert math.isclose(first, 1.5366117876437317, abs_tol=.001), first
-    assert (key in os.environ, os.environ.get(key)) == before
-    assert ea.compute_ea(a, b) == first
-assert ea.get_backend() == "paper"
+adaptive, loaded = runtime._get_runtime()
+assert loaded == library.resolve(), (loaded, library)
+assert (key in os.environ, os.environ.get(key)) == before
+first = ea.compute_ea(a, b)
+assert math.isclose(first, 1.5366117876437317, abs_tol=.001), first
+assert (key in os.environ, os.environ.get(key)) == before
+assert ea.compute_ea(a, b) == first
 assert (key in os.environ, os.environ.get(key)) == before
 
 # The normalization fix must not silently permit switching an already loaded
@@ -175,19 +190,16 @@ different = sandbox / ("different_" + original.name)
 shutil.copy2(library, different)
 os.environ[key] = str(different)
 try:
-    with ea.use_backend("v53"):
-        ea.compute_ea(a, b)
+    ea.compute_ea(a, b)
 except RuntimeError as error:
-    assert "changed after v53 was loaded" in str(error), str(error)
+    assert "changed after EA was loaded" in str(error), str(error)
 else:
     raise AssertionError("different native library was accepted after initial load")
-assert ea.get_backend() == "paper"
 if before[0]:
     os.environ[key] = before[1]
 else:
     os.environ.pop(key, None)
-with ea.use_backend("v53"):
-    assert ea.compute_ea(a, b) == first
+assert ea.compute_ea(a, b) == first
 assert (key in os.environ, os.environ.get(key)) == before
 print("native path first-load and environment restoration OK: " + form)
 '''

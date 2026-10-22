@@ -31,7 +31,7 @@ from core_ea import (
 from yaw_rate import (
     CausalYawRateEWMA, DEFAULT_TAU_S, DEFAULT_DEADBAND_RAD_S, DEFAULT_DECIMALS,
 )
-from evasive_acceleration.backends import get_backend, _preflight_backend
+from evasive_acceleration.runtime import _preflight_runtime
 
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_DIR = PROJECT_ROOT_DIR / "demo_data"
@@ -340,9 +340,8 @@ def process_one_csv(
     # Optional engine setup is a run-level failure, not one solver error/NaN
     # per row. Capture the active runtime before the measured frame loop and
     # before creating any output; the causal yaw-rate processing is unchanged.
-    _preflight_backend()
+    _preflight_runtime()
     runtime_provenance = get_core_provenance()
-    backend = get_backend()
 
     input_digest = hashlib.sha256(input_path.read_bytes()).hexdigest()
     df = _read_input_csv(input_path)
@@ -438,7 +437,7 @@ def process_one_csv(
     metadata = {
         "schema_version": 1, "software_version": _software_version(),
         "core_id": runtime_provenance["core_id"],
-        "backend": backend,
+        "backend": "EA",
         "core_provenance": runtime_provenance,
         "input_sha256": input_digest,
         "dependency_versions": _dependency_versions(),
@@ -454,7 +453,7 @@ def process_one_csv(
     }
     if hashlib.sha256(input_path.read_bytes()).hexdigest() != input_digest:
         raise RuntimeError("Input CSV changed during computation; no results were written.")
-    if get_backend() != backend or get_core_provenance() != runtime_provenance:
+    if get_core_provenance() != runtime_provenance:
         raise RuntimeError("EA runtime changed during computation; no results were written.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation prevents a concurrent run from silently replacing results.
@@ -484,7 +483,7 @@ def process_one_csv(
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
     try:
-        _preflight_backend()
+        _preflight_runtime()
     except RuntimeError as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 2
