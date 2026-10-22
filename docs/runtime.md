@@ -43,7 +43,12 @@ names. This keeps preprocessing outside the measured EA interval.
 Each interval uses `time.perf_counter_ns()` around the four CV/CTRV mode
 evaluations and their aggregate mean. Import, CSV parsing, state conversion,
 yaw-rate validation/estimation, warm-up, hashing, and output writes are excluded.
-The defaults are three excluded warm-up calls and one measured pass per frame.
+For the default `paper` backend, the defaults are three excluded warm-up calls
+and one measured pass per frame. With `--backend v53`, the excluded warm-up
+count is `max(--warmup, number of selected inputs)`: every selected input is
+evaluated at least once before measurement, including turning and fallback
+paths. Both backends default to one measured pass per frame. The JSON records
+the requested and actual warm-up counts separately.
 
 ```bash
 ea benchmark --input-dir /path/to/csvs --warmup 3 --repeats 1 --max-frames 0 --output-dir outputs/runtime_full

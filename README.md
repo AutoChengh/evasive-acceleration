@@ -104,7 +104,7 @@ for font setup, hosted notebook use after publication, and headless execution.
 From a source checkout, with Python 3.10 or newer:
 
 ```bash
-git clone https://github.com/AutoChengh/evasive-acceleration-v2.git
+git clone --branch review/v53-integration-20261022 https://github.com/AutoChengh/evasive-acceleration-v2.git
 cd evasive-acceleration-v2
 python -m pip install -e ".[batch,viz,fast]"
 ea single

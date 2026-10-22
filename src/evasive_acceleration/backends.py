@@ -81,8 +81,10 @@ def _get_v53_runtime():
     with _native_import_lock:
         initial_digest = _check_loaded_native_digest(library_path)
         previous = os.environ.get("EA_NATIVE_CELLS_LIBRARY")
-        if previous is None:
-            os.environ["EA_NATIVE_CELLS_LIBRARY"] = str(library_path)
+        # Discovery accepts relative/tilde paths and treats an empty value as
+        # unset. The frozen loader does not normalize those spellings, so it
+        # must always receive the resolved absolute path during first import.
+        os.environ["EA_NATIVE_CELLS_LIBRARY"] = str(library_path)
         try:
             adaptive = importlib.import_module(
                 "evasive_acceleration._experimental.continuous_adaptive_cells"
@@ -98,6 +100,8 @@ def _get_v53_runtime():
         finally:
             if previous is None:
                 os.environ.pop("EA_NATIVE_CELLS_LIBRARY", None)
+            else:
+                os.environ["EA_NATIVE_CELLS_LIBRARY"] = previous
         if Path(native._library_path).resolve() != library_path:
             raise RuntimeError(
                 "A different v53 native library is already loaded. Start a fresh "
@@ -130,8 +134,8 @@ def _check_loaded_native_digest(library_path: Path) -> str:
 def _check_library_override(library_path: Path) -> None:
     """Reject a changed explicit path after the native runtime was loaded."""
     override = os.environ.get("EA_NATIVE_CELLS_LIBRARY")
-    if override is not None and override != str(library_path):
-        if Path(override).resolve() != library_path:
+    if override and override != str(library_path):
+        if Path(override).expanduser().resolve() != library_path:
             raise RuntimeError(
                 "EA_NATIVE_CELLS_LIBRARY changed after v53 was loaded. Start a "
                 "fresh Python process to use a different native library."
