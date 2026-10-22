@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
-  "record_context": "Historical acceptance and integration snapshot before the single-implementation release. Solver identifiers and selector fields below describe that frozen review snapshot, not the current public API; the current main branch exposes EA only.",
-  "solver": "v53",
-  "default_public_backend": "paper",
-  "v53_is_explicit_opt_in": true,
+  "schema_version": 2,
+  "method": "Evasive Acceleration (EA)",
+  "core_id": "ea-continuous-certified-20261022",
+  "record_type": "frozen_validation_evidence",
+  "record_context": "Frozen EA full-cohort acceptance and public-adapter integration records. Method labels are standardized as EA; all recorded measurements and source/build hashes are preserved. The records describe validation evidence, not selectable algorithms or runtime configurations.",
   "frozen_acceptance": {
     "date": "2026-10-22",
     "server": "39103",
@@ -23,7 +23,7 @@
     "nan_frames": 0,
     "inf_frames": 9,
     "max_stress_and_repeated_ms": 15.820041,
-    "finite_comparison_reference": "frozen continuous_parallel final_v13, not the retained paper grid backend",
+    "finite_comparison_reference": "frozen continuous-time numerical reference; source archive identified by candidate_archive_sha256, distinct from the historical grid estimator",
     "max_finite_reference_difference_mps2": 0.0009496987119621547,
     "candidate_archive_sha256": "37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15",
     "native_library_sha256": "a0037dd2e748bf3af863d2e3b00e07ad1120115bfaa32f4d8f5230ee4ac119c1"

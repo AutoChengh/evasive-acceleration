@@ -1,5 +1,6 @@
 {
-  "version": "v53",
+  "method": "Evasive Acceleration (EA)",
+  "core_id": "ea-continuous-certified-20261022",
   "validated_on": "2026-10-22",
   "line_endings": "SHA-256 after CRLF to LF normalization",
   "candidate_archive_sha256": "37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15",

@@ -16,15 +16,15 @@ CHECKER = runpy.run_path(str(ROOT / "tools/check_solver_integrity.py"))
 def test_integrity_gate_detects_changes_without_refreshing_manifest(tmp_path, alteration):
     snapshot = ROOT / "src/evasive_acceleration/_experimental"
     destination = tmp_path / "src/evasive_acceleration/_experimental"
-    record = json.loads((snapshot / "v53_sources.json").read_text(encoding="utf-8"))
+    record = json.loads((snapshot / "ea_sources.json").read_text(encoding="utf-8"))
     destination.mkdir(parents=True)
-    for name in ["v53_sources.json", *record["sources"]]:
+    for name in ["ea_sources.json", *record["sources"]]:
         shutil.copy2(snapshot / name, destination / name)
     for relative in CHECKER["AUXILIARY_HASHES"]:
         path = tmp_path / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, path)
-    manifest = destination / "v53_sources.json"
+    manifest = destination / "ea_sources.json"
     before = manifest.read_bytes()
     if alteration == "kernel":
         path = destination / "continuous_adaptive_cells.py"

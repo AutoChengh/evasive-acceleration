@@ -20,11 +20,15 @@ AUXILIARY_HASHES = {
 
 def check_solver_integrity(project_root: Path = PROJECT_ROOT) -> list[str]:
     root = project_root / "src" / "evasive_acceleration" / "_experimental"
-    manifest = root / "v53_sources.json"
+    manifest = root / "ea_sources.json"
     if not manifest.is_file():
         return ["Missing frozen EA source manifest"]
     record = json.loads(manifest.read_text(encoding="utf-8"))
     failures = []
+    if record.get("method") != "Evasive Acceleration (EA)":
+        failures.append("The source manifest must identify the method as EA")
+    if record.get("core_id") != "ea-continuous-certified-20261022":
+        failures.append("The EA source identity does not match the validated snapshot")
     for name, expected in record["sources"].items():
         path = root / name
         if path.parent != root or not path.is_file():

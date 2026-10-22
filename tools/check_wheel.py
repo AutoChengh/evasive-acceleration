@@ -29,7 +29,10 @@ prefix = Path(sys.prefix).resolve()
 for module in (ea, core_ea, native_build):
     assert Path(module.__file__).resolve().is_relative_to(prefix), module.__file__
 root = Path(ea.__file__).resolve().parent / '_experimental'
-manifest = json.loads((root / 'v53_sources.json').read_text(encoding='utf-8'))
+assert {p.name for p in root.glob('*.json')} == {'ea_sources.json'}
+manifest = json.loads((root / 'ea_sources.json').read_text(encoding='utf-8'))
+assert manifest['method'] == 'Evasive Acceleration (EA)'
+assert manifest['core_id'] == 'ea-continuous-certified-20261022'
 assert {p.name for p in root.glob('*.py')} == {
     name for name in manifest['sources'] if name.endswith('.py')
 } | {'__init__.py'}

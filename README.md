@@ -15,7 +15,7 @@ Paper: [Driving risk emerges from the required two-dimensional joint evasive acc
 
 [Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Python usage](#python-usage) · [Input conventions](#input-conventions) · [Measure runtime](#measure-runtime)
 
-One EA implementation serves the Python API, command line, and notebooks.
+Compute EA through the Python API, command line, or notebooks.
 Provide yaw rates directly, or estimate missing values from current and past
 headings. See [installation](#install-and-run) to prepare the native component
 once before use.
@@ -215,7 +215,7 @@ must match the corresponding current state. For continuous online use, keep
 one `CausalYawRateEWMA` instance per object; see the
 [yaw-rate method and API](docs/causal_yaw_rate.md).
 
-Both yaw-rate paths call the same EA solver; there is no backend selection.
+Both yaw-rate input paths use the same EA calculation.
 
 ## Input conventions
 
