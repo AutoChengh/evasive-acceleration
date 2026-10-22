@@ -47,7 +47,7 @@ def _users(state):
     return ea.RoadUserState(*state[:7]), ea.RoadUserState(*state[7:])
 
 
-def test_missing_numba_fails_explicitly_instead_of_using_an_archived_solver(tmp_path):
+def test_missing_numba_fails_explicitly_instead_of_silently_changing_the_algorithm(tmp_path):
     code = """
 import builtins
 original_import = builtins.__import__
@@ -73,7 +73,7 @@ print('missing dependency explicitly rejected')
     assert "missing dependency explicitly rejected" in result.stdout
 
 
-def test_ea_public_dataclass_legacy_and_four_modes_agree(native_ea):
+def test_ea_dataclass_keyword_interface_and_four_modes_agree(native_ea):
     state = _fictional_state()
     before = state.copy()
     a, b = _users(state)
@@ -93,7 +93,7 @@ def test_ea_public_dataclass_legacy_and_four_modes_agree(native_ea):
 
 @pytest.mark.parametrize("yaw_rate", [.1, 6.])
 def test_ea_outputs_have_independent_continuous_safety_certificate(native_ea, yaw_rate):
-    from evasive_acceleration._experimental import continuous as independent
+    from evasive_acceleration._solver import continuous as independent
 
     state = _fictional_state()
     state[6] = yaw_rate
@@ -154,7 +154,7 @@ def test_ea_rejects_invalid_states_and_options_through_existing_api(native_ea):
 
 
 def test_ea_tighter_tolerance_is_respected_for_zero_yaw(native_ea, monkeypatch):
-    from evasive_acceleration._experimental import continuous_parallel as preserved
+    from evasive_acceleration._solver import continuous_parallel as preserved
 
     original = preserved.solve_pair
     observed = []
@@ -181,7 +181,7 @@ def test_ea_tighter_tolerance_is_respected_for_zero_yaw(native_ea, monkeypatch):
 def test_native_cpp_is_available_as_package_resource():
     from importlib.resources import files
 
-    source = files("evasive_acceleration._experimental").joinpath("native_cells.cpp")
+    source = files("evasive_acceleration._solver").joinpath("native_cells.cpp")
     assert source.is_file(), "source/wheel must include the reproducible native source"
     assert "ea_cells_native_solve_seeded" in source.read_text(encoding="utf-8")
 
@@ -197,8 +197,10 @@ def _assert_active_ea_provenance(provenance):
     assert provenance["core_id"] == CORE_ID
     assert provenance["backend"] == "EA"
     hashes = provenance["runtime_source_sha256"]
-    assert "_experimental/continuous_adaptive_cells.py" in hashes
-    assert "_experimental/native_cells.cpp" in hashes
+    assert "_solver/continuous_adaptive_cells.py" in hashes
+    assert "_solver/native_cells.cpp" in hashes
+    assert "_model/constants.py" in hashes
+    assert not any(name.startswith(("_experimental/", "_paper/")) for name in hashes)
     package = Path(ea.__file__).resolve().parent
     for relative, expected in hashes.items():
         path = package.parent / relative if relative == "core_ea.py" else package / relative

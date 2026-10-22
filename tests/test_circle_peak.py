@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from evasive_acceleration._experimental import circle_proposal as p
+from evasive_acceleration._solver import circle_proposal as p
 
 
 def _outside(x,y,normals,offsets,counts):

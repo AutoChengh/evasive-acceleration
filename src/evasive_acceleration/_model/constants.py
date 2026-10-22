@@ -1,7 +1,7 @@
-"""Decorator and constants shim; the historical numerical search is removed.
+"""Shared numerical defaults and JIT decorator for the EA calculation.
 
-Validated EA kernel files import ``njit`` through this historical module path.
-Keeping this shim avoids any change to those kernel files or their hashes.
+Some scalar defaults also support compatible input signatures. EA's numerical
+accuracy is controlled by its acceleration tolerance and safety certificates.
 """
 from numba import njit
 

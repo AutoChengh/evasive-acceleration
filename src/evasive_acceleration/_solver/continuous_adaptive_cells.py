@@ -1,10 +1,11 @@
-"""Disjunctive convex-cell B&B in 2-D acceleration space.
+"""EA disjunctive convex-cell branch-and-bound in 2-D acceleration space.
 
 At a real collision time every feasible acceleration must escape one of the
 eight SAT halfplanes. Partition the current convex cell into those escape
-pieces and keep their exact min-norm bounds. This replaces repeated global
-angle restarts and full polygon-union reconstruction. No unresolved scalar is
-accepted; upper proposals still need full continuous certification.
+pieces and keep their exact min-norm bounds. The frontier carries these bounds
+through successive contact constraints. No unresolved scalar is accepted;
+upper proposals still need full continuous certification. Internal
+reference/fallback labels denote EA angular refinement, not another algorithm.
 """
 from dataclasses import dataclass
 import math
@@ -14,8 +15,8 @@ from . import penalty_safety as initial_safety,continuous_compact_kernel as prop
 from .circle_proposal import inside_polygon,propose as circle_proposal
 from . import continuous_native_cells as native_fast
 from .continuous_compact_kernel import _refine_witness_time
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 njit=motion.njit
 
 
@@ -220,8 +221,8 @@ def solve_pair(state_values,pair,config=EAConfig(),budget=CellBudget(),_seed=Non
     state[2],state[9]=max(0.,state[2]),max(0.,state[9])
     wa=state[6]if pair[0]else 0.;wb=state[13]if pair[1]else 0.
     wa=0. if abs(wa)<1e-6 else wa;wb=0. if abs(wb)<1e-6 else wb
-    # Select by geometric rotation rate, never by corpus/frame identity.
-    # Both engines retain the identical problem, guard, and precision.
+    # Dispatch internal numerical stages by geometric rotation rate, never by
+    # corpus/frame identity. All stages use the same EA problem, guard, and precision.
     if max(abs(wa),abs(wb))>5.:
         return native_fast.solve_pair(state,pair,config,budget,_seed=_seed)
     if wa==0. and wb==0.:

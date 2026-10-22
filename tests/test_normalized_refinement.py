@@ -1,8 +1,8 @@
 """A cut heuristic must improve only proposals, never claim safety."""
 import math
 import numpy as np
-from evasive_acceleration._experimental.normalized_refinement import refine,refine_brent
-from evasive_acceleration._experimental.continuous import separation
+from evasive_acceleration._solver.normalized_refinement import refine,refine_brent
+from evasive_acceleration._solver.continuous import separation
 
 
 def test_normalized_cut_does_not_weaken_a_real_witness():

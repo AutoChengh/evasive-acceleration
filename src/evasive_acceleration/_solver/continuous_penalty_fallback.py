@@ -1,24 +1,24 @@
-"""Opt-in continuous-time, angular-bound EA research candidate.
+"""EA separation-oracle refinement with continuous-safety certification.
 
 Adaptive time constraints give lower bounds on the continuous problem. A
 Taylor swept-OBB certificate supplies a safe upper bound. Angular subdivision
 stops only when that gap closes; exhausted budgets are explicitly unresolved.
-No released solver, default input adapter or yaw-rate estimator is changed.
+This refinement is an internal stage of EA, not a separately selectable method.
 """
 from dataclasses import dataclass
 import math
 import numpy as np
 
-from .._paper import numerical_solver as geometry
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model import constants as geometry
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 
 njit = geometry.njit
 
 
 @dataclass(frozen=True)
 class ContinuousBudget:
-    # The paper's numerical acceleration tolerance. Callers can request 1e-4
+    # Default EA acceleration tolerance. Callers can request 1e-4
     # explicitly; precision is reported as a certified upper/lower bracket.
     acceleration_tolerance: float = .001
     clearance_m: float = 1e-7
@@ -401,5 +401,5 @@ def compute_selected_modes_with_diagnostics(state_values, config=EAConfig(), pai
 def compute_selected_modes(state_values, config=EAConfig(), pairs=FOUR_PAIRS, budget=ContinuousBudget()):
     results = compute_selected_modes_with_diagnostics(state_values, config, pairs, budget)
     if any(not r.continuous_verified and math.isfinite(r.value) for r in results.values()):
-        raise RuntimeError("Continuous candidate unresolved; inspect diagnostic results, do not publish an unsafe scalar")
+        raise RuntimeError("EA continuous search unresolved; inspect diagnostic results; no uncertified scalar is returned")
     return {pair: r.value for pair, r in results.items()}

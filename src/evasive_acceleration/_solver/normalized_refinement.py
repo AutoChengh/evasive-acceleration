@@ -1,4 +1,4 @@
-"""Exact-time cut proposals in acceleration units, never a safety test.
+"""EA exact-time cut proposals in acceleration units, never a safety test.
 
 The SAT gap at t becomes an acceleration-space halfplane distance when
 multiplied by 2/t**2. Locally improving that violation can produce stronger

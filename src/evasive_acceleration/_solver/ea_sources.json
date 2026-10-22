@@ -1,0 +1,26 @@
+{
+  "method": "Evasive Acceleration (EA)",
+  "core_id": "ea-continuous-certified-20261022",
+  "validated_on": "2026-10-22",
+  "source_reviewed_on": "2026-10-23",
+  "source_review": "Private namespaces and non-executable text were standardized; all 31 Python operational structures and C++ non-comment tokens match the validated source after the recorded import and diagnostic-text relocations.",
+  "line_endings": "SHA-256 after CRLF to LF normalization",
+  "validation_archive_sha256": "37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15",
+  "sources": {
+    "circle_proposal.py": "adac8b634de872201764ca40c641a70206c98cc2ba8930e747a873ede79fd4a0",
+    "continuous_adaptive_cells.py": "6bfb5360c99262c6b3d27c3e2ded4e9bfb381ef264ef279e4aa1b46108948a91",
+    "continuous_cells.py": "a121449c442ab8bf57194adc8d29848c1f36c0bbe68a43b5c9972466b1c81a0b",
+    "continuous_compact_kernel.py": "72378ec6d07d2a853bf45411208ccd374347acfeff66c1a17ad8241b7d97be79",
+    "continuous_native_cells.py": "8eeaa9adac00b4c127d6dcb2dd353817ea1734743db6b1ffdd400e7a5e8672d3",
+    "continuous_parallel.py": "86a00cd1f85bb4649d59a0d819b1ee481b9f0e70a82835e2f2d9cb7d65f19346",
+    "continuous_penalty_fallback.py": "272246d96528fa1f65809b2546ccfafaa85a8f1b71ee77689ea35df070b2f77e",
+    "continuous_resilient_cells.py": "7d6d75d42a47966fb8c7c8422bbd6a50be4a2f987058deb4b1ce395203fb8ccb",
+    "continuous_tail_kernel.py": "a26835d31253594411346d47099702d379cc76f1d5fdbef6642f6f6a4bd11c67",
+    "continuous_tail.py": "c9ee9233852227d8c982ba5e5de250f33f443c68790f6568186b74aaddd53ffd",
+    "continuous.py": "e1339bff7a6427b459aafbeb9a5c7a4908035f22257688abab886333e4412e4d",
+    "native_cells.cpp": "9ddccdc6aedfbf1c3a4ff65137a3e3ebcd67b556fc6b98eb286fc3df262a1d11",
+    "normalized_refinement.py": "4ba9fa7f7600efa95d6ce7d9f6fd626ccbab7235370070656c717d96ac19d34b",
+    "penalty_safety.py": "e3decf107e45a31ef7fa9b40634f594bb2818887e0f497e56900febd8101d379",
+    "priority_safety.py": "cf92b6108748a1254965d113704828c24511bc202a301ab124a5b92b43afa50e"
+  }
+}

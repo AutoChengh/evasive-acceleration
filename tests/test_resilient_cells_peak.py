@@ -1,8 +1,8 @@
 import math
 import numpy as np
 import pytest
-from evasive_acceleration._experimental import continuous_resilient_cells as c
-from evasive_acceleration._experimental import continuous_parallel as reference
+from evasive_acceleration._solver import continuous_resilient_cells as c
+from evasive_acceleration._solver import continuous_parallel as reference
 
 
 def _state():return np.array([0.,0.,2.,0.,4.,2.,.1,8.,0.,1.,math.pi,4.,2.,.2])
@@ -27,7 +27,7 @@ def test_unresolved_primary_uses_only_a_certified_reference_result(monkeypatch):
     assert result.status=='certified-cell-reference-fallback'and result.iterations==8
 
 
-def test_two_unresolved_solvers_still_reject_scalar_output(monkeypatch):
+def test_unresolved_search_and_recovery_still_reject_scalar_output(monkeypatch):
     raw=(float('inf'),float('nan'),float('nan'),0.,False,False,1,1,0,1,1,5)
     monkeypatch.setattr(c,'_solve',lambda *args:raw)
     fallback=c.safety.ContinuousResult(float('inf'),float('nan'),float('nan'),0.,False,False,1,1,0,1,1,'unresolved')

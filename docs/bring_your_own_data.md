@@ -2,8 +2,9 @@
 
 The example adapter in [`examples/from_dataframe.py`](../examples/from_dataframe.py)
 converts one long-form tracking table into the two-actor table accepted by EA.
-It calls the existing `process_one_csv` function, including its causal yaw-rate
-estimator and output diagnostics. No EA solver settings or geometry are changed.
+It calls the `process_one_csv` function, including its causal yaw-rate
+estimator and output diagnostics. Only input formatting is adapted; the
+EA algorithm, numerical settings and geometry are unchanged.
 
 Install from the repository root:
 

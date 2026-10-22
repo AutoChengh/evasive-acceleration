@@ -1,4 +1,4 @@
-"""Exact finite-polygon circle gaps, used ONLY as upper proposals."""
+"""Exact finite-polygon circle gaps used only as EA upper-bound proposals."""
 import math
 import numpy as np
 from .continuous import njit

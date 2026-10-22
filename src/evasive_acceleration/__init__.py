@@ -26,7 +26,7 @@ from yaw_rate import (
 )
 __version__ = "0.3.0"
 
-# One high-level entry point; these names refer to the existing implementation.
+# These public convenience aliases evaluate the same EA function.
 compute_ea = compute_single_frame_ea
 compute_ea_timed = compute_single_frame_ea_timed
 

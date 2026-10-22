@@ -28,7 +28,8 @@ from evasive_acceleration import native_build
 prefix = Path(sys.prefix).resolve()
 for module in (ea, core_ea, native_build):
     assert Path(module.__file__).resolve().is_relative_to(prefix), module.__file__
-root = Path(ea.__file__).resolve().parent / '_experimental'
+package = Path(ea.__file__).resolve().parent
+root = package / '_solver'
 assert {p.name for p in root.glob('*.json')} == {'ea_sources.json'}
 manifest = json.loads((root / 'ea_sources.json').read_text(encoding='utf-8'))
 assert manifest['method'] == 'Evasive Acceleration (EA)'
@@ -40,15 +41,19 @@ for name, expected in manifest['sources'].items():
     assert hashlib.sha256((root / name).read_bytes().replace(b'\r\n', b'\n')).hexdigest() == expected
 for name in ('get_backend', 'use_backend', 'BACKEND_NAMES'):
     assert not hasattr(ea, name), name
-for name in ('backends', '_paper.calculator', '_paper.verified_solver',
-             '_paper.verified_calculator', '_paper.motion'):
+for name in ('backends', '_experimental', '_paper', '_model.calculator',
+             '_model.verified_solver', '_model.verified_calculator', '_model.motion',
+             '_model.numerical_solver'):
     assert not (Path(ea.__file__).resolve().parent / (name.replace('.', '/') + '.py')).exists(), name
     try:
         importlib.import_module('evasive_acceleration.' + name)
     except ModuleNotFoundError:
         pass
     else:
-        raise AssertionError('Archived solver is still installed: ' + name)
+        raise AssertionError('Unsupported solver module is installed: ' + name)
+assert not (package / '_experimental').exists()
+assert not (package / '_paper').exists()
+assert (package / '_model' / 'constants.py').is_file()
 a = ea.RoadUserState(0, 0, 8, 0, 4.8, 1.8, .1)
 b = ea.RoadUserState(20, 1, 4, math.pi, 4.5, 1.8, 0)
 value = ea.compute_ea(a, b)

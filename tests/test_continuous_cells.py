@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from evasive_acceleration._experimental import continuous_cells as c
+from evasive_acceleration._solver import continuous_cells as c
 
 
 def test_affine_ray_closes_false_gaps_between_sampled_contacts():

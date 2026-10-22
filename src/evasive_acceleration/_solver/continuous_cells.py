@@ -1,4 +1,4 @@
-"""Continuous-time exclusion intervals with adaptive inner/outer OBB envelopes.
+"""EA continuous-time exclusion intervals with inner/outer OBB envelopes.
 
 An affine relative centre and fixed strip polygon over a TIME INTERVAL give a
 connected forbidden acceleration interval on a ray. Compute its extrema
@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import math
 import numpy as np
 from . import continuous as base
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 
 njit = base.njit
 
@@ -424,5 +424,5 @@ def compute_selected_modes_with_diagnostics(state_values, config=EAConfig(), pai
 def compute_selected_modes(state_values, config=EAConfig(), pairs=FOUR_PAIRS, budget=CellBudget()):
     result = compute_selected_modes_with_diagnostics(state_values, config, pairs, budget)
     if any(not (r.continuous_verified and r.angular_converged) and math.isfinite(r.value) for r in result.values()):
-        raise RuntimeError("Continuous cell candidate unresolved; use diagnostics, not an unsafe scalar")
+        raise RuntimeError("EA cell refinement unresolved; inspect diagnostics; no uncertified scalar is returned")
     return {pair: r.value for pair, r in result.items()}

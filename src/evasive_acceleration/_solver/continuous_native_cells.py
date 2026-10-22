@@ -1,8 +1,10 @@
-"""Opt-in native convex frontier with the SAME compiled safety predicates.
+"""Native convex-cell stage of EA with compiled continuous-safety predicates.
 
 No compilation is performed by a measured call. The library must be built in
 advance with -fno-fast-math -ffp-contract=off. Every unresolved native result
-uses the preserved exact fallback, whose work remains inside the call.
+continues through EA's certified angular-refinement stage inside the same call.
+Internal reference/fallback labels describe these numerical stages, not a
+different EA algorithm.
 """
 import ctypes
 import math
@@ -16,8 +18,8 @@ from . import penalty_safety as initial_safety,continuous_compact_kernel as prop
 from .continuous_resilient_cells import CellBudget,planes
 from .circle_proposal import propose,inside_polygon
 from .normalized_refinement import refine_brent as refine_cut
-from .._paper.config import EAConfig
-from .._paper.four_modes import FOUR_PAIRS
+from .._model.config import EAConfig
+from .._model.four_modes import FOUR_PAIRS
 
 _dp=types.CPointer(types.float64);_ip=types.CPointer(types.int64)
 _cert_sig=types.intc(_dp,*([types.float64]*6),types.int64,_dp,_ip)
@@ -115,7 +117,7 @@ def solve_pair(state_values,pair,config=EAConfig(),budget=CellBudget(),_seed=Non
     if len(pair)!=2 or any(int(v)not in (0,1)for v in pair):raise ValueError('CV/CTRV pairs required')
     if not(0.<config.prediction_horizon_s<math.inf and 0.<=config.max_extra_acceleration_mps2<math.inf):
         raise ValueError('Require positive finite horizon and nonnegative finite acceleration cap')
-    if budget.max_vertices>128:raise ValueError('Native experimental cell capacity is128 vertices')
+    if budget.max_vertices>128:raise ValueError('EA native cell capacity is 128 vertices')
     state[2],state[9]=max(0.,state[2]),max(0.,state[9])
     wa=state[6]if pair[0]else 0.;wb=state[13]if pair[1]else 0.
     wa=0. if abs(wa)<1e-6 else wa;wb=0. if abs(wb)<1e-6 else wb

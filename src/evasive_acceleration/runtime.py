@@ -1,7 +1,8 @@
-"""The sole EA runtime, with explicit preparation and numerical provenance.
+"""Runtime for the official EA algorithm and its numerical provenance.
 
-The validated numerical kernels are unchanged. The native library must be
-built before evaluation; no EA call invokes a compiler or another solver.
+The native library must be prepared before evaluation. Every public input
+interface uses the same EA objective, motion hypotheses and accuracy checks;
+an EA call never launches a compiler.
 """
 
 from __future__ import annotations
@@ -56,10 +57,10 @@ def _get_runtime():
         os.environ["EA_NATIVE_CELLS_LIBRARY"] = str(library_path)
         try:
             adaptive = importlib.import_module(
-                "evasive_acceleration._experimental.continuous_adaptive_cells"
+                "evasive_acceleration._solver.continuous_adaptive_cells"
             )
             native = importlib.import_module(
-                "evasive_acceleration._experimental.continuous_native_cells"
+                "evasive_acceleration._solver.continuous_native_cells"
             )
         except (ImportError, OSError) as exc:
             raise RuntimeError(
@@ -132,7 +133,7 @@ def compute_modes(state_values, config, pairs=None):
     explicitly request another tolerance; legacy grid/direction options remain
     accepted but do not define EA's continuous-time accuracy.
     """
-    from ._paper.four_modes import FOUR_PAIRS
+    from ._model.four_modes import FOUR_PAIRS
 
     adaptive, library_path = _get_runtime()
     _check_library_override(library_path)
@@ -155,7 +156,7 @@ def compute_modes(state_values, config, pairs=None):
         state_values, config, pairs=turning_pairs, budget=budget,
     ) if turning_pairs else {}
     if zero_pairs:
-        from ._experimental import continuous_parallel as preserved
+        from ._solver import continuous_parallel as preserved
 
         result = preserved.solve_pair(
             state_values, zero_pairs[0], config,
@@ -175,21 +176,21 @@ def compute_modes(state_values, config, pairs=None):
 
 
 def get_runtime_provenance() -> dict:
-    """Hash the actual frozen runtime and native binary, not the old solver."""
+    """Hash EA numerical stages, model definitions and the loaded native binary."""
     _adaptive, library_path = _get_runtime()
     _check_library_override(library_path)
     native_digest = _check_loaded_native_digest(library_path)
     package = Path(__file__).resolve().parent
-    paths = {"_experimental/" + name + ".py":
-             package / "_experimental" / (name + ".py") for name in _SOLVER_MODULES}
+    paths = {"_solver/" + name + ".py":
+             package / "_solver" / (name + ".py") for name in _SOLVER_MODULES}
     paths.update({
-        "_experimental/native_cells.cpp": package / "_experimental/native_cells.cpp",
+        "_solver/native_cells.cpp": package / "_solver/native_cells.cpp",
         "runtime.py": Path(__file__).resolve(),
         "native_build.py": package / "native_build.py",
         "core_ea.py": package.parent / "core_ea.py",
     })
-    paths.update({"_paper/" + name: package / "_paper" / name
-                  for name in ("__init__.py", "config.py", "four_modes.py", "numerical_solver.py")})
+    paths.update({"_model/" + name: package / "_model" / name
+                  for name in ("__init__.py", "config.py", "four_modes.py", "constants.py")})
     return {
         "core_id": CORE_ID,
         "backend": "EA",

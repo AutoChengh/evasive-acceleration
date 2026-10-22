@@ -19,7 +19,7 @@ import sys
 
 
 def native_source_path() -> Path:
-    return Path(__file__).resolve().parent / "_experimental" / "native_cells.cpp"
+    return Path(__file__).resolve().parent / "_solver" / "native_cells.cpp"
 
 
 def _sha256(path: Path) -> str:

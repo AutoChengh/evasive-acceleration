@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 
-from .numerical_solver import (
+from .constants import (
     DEFAULT_A_MAX,
     DEFAULT_COARSE_SECTOR_NUM,
     DEFAULT_DT_COARSE,
@@ -18,13 +18,15 @@ from .numerical_solver import (
 
 
 class MotionModel(IntEnum):
-    """Baseline motion model used by one road user."""
+    """Motion-model identifiers recognized in input and result schemas."""
 
     CV = 0
     CTRV = 1
     CTRA = 2
 
 
+# Schema cleanup recognizes these labels. The EA computation itself uses
+# only the CV/CTRV pairings declared in four_modes.py.
 MODEL_ORDER = (
     MotionModel.CV,
     MotionModel.CTRV,
@@ -33,10 +35,11 @@ MODEL_ORDER = (
 
 TIME_COLUMN = "Time (s)"
 
-# EA keeps the dataset's original (offline, centred-difference) kinematic
-# observations.  The CTRA modes additionally use ``EA_ACCELERATION_COLUMNS``.
-# TTR is evaluated as an online/strictly-causal measure, therefore it has its
-# own EWMA-smoothed yaw-rate and longitudinal-acceleration observations.
+# CSV field names do not prescribe how observations were obtained. EA accepts
+# provided yaw rates or estimates missing rates using current/past headings.
+# EA uses CV/CTRV only. Acceleration/CTRA and TTR names below are recognized
+# for result-schema cleanup and comparison-metric compatibility, not extra EA
+# motion hypotheses or alternative definitions of the EA score.
 EA_YAW_RATE_COLUMNS = ("Yawrate", "2_Yawrate")
 EA_ACCELERATION_COLUMNS = ("A_lon", "2_A_lon")
 TTR_YAW_RATE_COLUMNS = (
@@ -126,9 +129,8 @@ ALL_PAIR_KEYS = tuple(
     for model_2 in MODEL_ORDER
 )
 
-# Columns created by earlier scripts. They are removed before the new 11
-# columns are appended so repeated processing never leaves conflicting EA
-# definitions in one CSV.
+# Remove stale generated columns before writing EA results, so a processed
+# CSV has one unambiguous EA score and its four motion-model components.
 LEGACY_GENERATED_COLUMNS = (
     "EA_Original_CTRV_CV_Mean4",
     "EA_CTRA_CTRA",

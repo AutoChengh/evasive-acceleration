@@ -23,9 +23,9 @@
     "nan_frames": 0,
     "inf_frames": 9,
     "max_stress_and_repeated_ms": 15.820041,
-    "finite_comparison_reference": "frozen continuous-time numerical reference; source archive identified by candidate_archive_sha256, distinct from the historical grid estimator",
+    "finite_comparison_reference": "frozen continuous-time numerical reference; source archive identified by validation_archive_sha256, distinct from the historical grid estimator",
     "max_finite_reference_difference_mps2": 0.0009496987119621547,
-    "candidate_archive_sha256": "37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15",
+    "validation_archive_sha256": "37f35ab3b0b62c587cac46b501f398d6283467ccb2220e9715700600bd9c7a15",
     "native_library_sha256": "a0037dd2e748bf3af863d2e3b00e07ad1120115bfaa32f4d8f5230ee4ac119c1"
   },
   "public_adapter_integration": {

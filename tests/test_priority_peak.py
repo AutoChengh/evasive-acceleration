@@ -1,7 +1,7 @@
 import math
 import numpy as np
-from evasive_acceleration._experimental import priority_safety as p
-from evasive_acceleration._experimental import continuous as reference
+from evasive_acceleration._solver import priority_safety as p
+from evasive_acceleration._solver import continuous as reference
 
 
 def test_heap_preserves_all_intervals_in_lower_bound_order():
