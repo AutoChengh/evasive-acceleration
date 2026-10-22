@@ -173,7 +173,12 @@ def _source_hashes():
     paths = {"core_ea.py": adapter, "benchmark.py": Path(__file__).resolve()}
     paths.update({"_paper/" + path.name: path
                   for path in (adapter.parent / "evasive_acceleration/_paper").glob("*.py")})
-    return {name: sha256(path) for name, path in sorted(paths.items())}
+    result = {name: sha256(path) for name, path in sorted(paths.items())}
+    provenance = core_ea.get_core_provenance()
+    if provenance.get("backend") == "v53":
+        result.update(provenance["runtime_source_sha256"])
+        result["native_library"] = provenance["native_library_sha256"]
+    return result
 
 
 def run(args):
@@ -200,7 +205,12 @@ def run(args):
     source_hashes = _source_hashes()
     source_before = source_hashes["core_ea.py"]
     warmups = []
-    for index in range(args.warmup):
+    # v53 has separate lazy-compiled CV/CV, turning and exact-fallback paths.
+    # A prefix of straight-driving inputs cannot warm a later turning path.
+    # Exercise every selected input once before any reported measurement.
+    is_v53 = provenance.get("backend") == "v53"
+    warmup_count = max(args.warmup, len(cases)) if is_v53 else args.warmup
+    for index in range(warmup_count):
         started = time.perf_counter_ns()
         modes, score = _evaluate(cases[index % len(cases)]["kwargs"])
         elapsed = time.perf_counter_ns() - started
@@ -244,11 +254,13 @@ def run(args):
         "workload": "provided_csv_states" if files else "three_synthetic_smoke_cases",
         "unique_frames": len(cases), "repeats": args.repeats, "calls": len(times),
         "selection": "all input rows" if not args.max_frames else "first max_frames rows in sorted file order",
-        "warmup_calls": args.warmup, "warmup_elapsed_ms_excluded": warmups,
+        "warmup_calls": warmup_count, "warmup_requested_calls": args.warmup,
+        "warmup_policy": "every selected input at least once" if is_v53 else "requested cyclic prefix",
+        "warmup_elapsed_ms_excluded": warmups,
         "settings": {key: value for key, value in cases[0]["kwargs"].items() if key not in STATE_KEYS},
         "latency_all_calls": latency_summary(times),
         "status_counts": {name: statuses[name] for name in ("zero", "finite_positive", "inf", "error")},
-        "environment": environment, "core_id": core_ea.CORE_ID, "core_provenance": provenance,
+        "environment": environment, "core_id": provenance["core_id"], "core_provenance": provenance,
         "core_adapter_sha256": source_before, "benchmark_script_sha256": sha256(__file__),
         "source_sha256": source_hashes,
         "inputs": files, "source_and_inputs_unchanged": unchanged,

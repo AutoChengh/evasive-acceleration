@@ -37,6 +37,7 @@ include = ["evasive_acceleration*"]
 
 [tool.setuptools.package-data]
 "evasive_acceleration._paper" = ["*.json"]
+"evasive_acceleration._experimental" = ["native_cells.cpp", "v53_sources.json"]
 
 [tool.pytest.ini_options]
 # Generated outputs can contain unpacked source distributions and their tests.

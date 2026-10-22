@@ -7,3 +7,6 @@ recursive-include visualization *.py
 recursive-include assets/figures *.png *.pdf
 recursive-include demo_data *.csv
 recursive-include tests *.py *.json
+include src/evasive_acceleration/_experimental/native_cells.cpp
+include src/evasive_acceleration/_experimental/v53_sources.json
+include tests/native_geometry_harness.cpp

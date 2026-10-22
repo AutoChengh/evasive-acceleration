@@ -3,6 +3,11 @@
 Use `ea benchmark` to check warmed EA computation on your machine. It uses
 the existing four-pairing core, not a second or simplified solver.
 
+The default remains the paper-compatible solver. For the opt-in v53 solver,
+prepare its native component and pass `--backend v53`; see the
+[v53 setup and full-cohort acceptance record](runtime_v53.md). The historical
+table below measures the earlier paper-compatible implementation, not v53.
+
 ## Quick check
 
 After installing the package:

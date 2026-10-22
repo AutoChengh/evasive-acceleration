@@ -26,11 +26,12 @@ from core_ea import (
     DEFAULT_A_MAX, DEFAULT_COARSE_SECTOR_NUM, DEFAULT_DT_COARSE,
     DEFAULT_DT_FINE, DEFAULT_FINE_REFINE_RATIO, DEFAULT_LOCAL_FINE_DIR_NUM,
     DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG, DEFAULT_TOL, DEFAULT_T_TOTAL,
-    aggregate_ea_modes, compute_ea_modes,
+    aggregate_ea_modes, compute_ea_modes, get_core_provenance,
 )
 from yaw_rate import (
     CausalYawRateEWMA, DEFAULT_TAU_S, DEFAULT_DEADBAND_RAD_S, DEFAULT_DECIMALS,
 )
+from evasive_acceleration.backends import get_backend, _preflight_backend
 
 PROJECT_ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_DIR = PROJECT_ROOT_DIR / "demo_data"
@@ -336,6 +337,13 @@ def process_one_csv(
             f"Result already exists: {existing[0]}. Choose --output-dir or explicitly use --overwrite."
         )
 
+    # Optional engine setup is a run-level failure, not one solver error/NaN
+    # per row. Capture the active runtime before the measured frame loop and
+    # before creating any output; the causal yaw-rate processing is unchanged.
+    _preflight_backend()
+    runtime_provenance = get_core_provenance()
+    backend = get_backend()
+
     input_digest = hashlib.sha256(input_path.read_bytes()).hexdigest()
     df = _read_input_csv(input_path)
     validate_required_columns(df, str(input_path), yaw_rate_source, time_column)
@@ -429,7 +437,9 @@ def process_one_csv(
     }
     metadata = {
         "schema_version": 1, "software_version": _software_version(),
-        "core_id": CORE_ID,
+        "core_id": runtime_provenance["core_id"],
+        "backend": backend,
+        "core_provenance": runtime_provenance,
         "input_sha256": input_digest,
         "dependency_versions": _dependency_versions(),
         "requested_yaw_rate_source": yaw_rate_source,
@@ -444,6 +454,8 @@ def process_one_csv(
     }
     if hashlib.sha256(input_path.read_bytes()).hexdigest() != input_digest:
         raise RuntimeError("Input CSV changed during computation; no results were written.")
+    if get_backend() != backend or get_core_provenance() != runtime_provenance:
+        raise RuntimeError("EA runtime changed during computation; no results were written.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation prevents a concurrent run from silently replacing results.
     mode = "w" if overwrite else "x"
@@ -471,6 +483,11 @@ def process_one_csv(
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
+    try:
+        _preflight_backend()
+    except RuntimeError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 2
     if args.input is not None:
         files = [args.input]
     else:

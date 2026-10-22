@@ -7,6 +7,10 @@ All four CV/CTRV pairings use the same finite-horizon numerical search. The
 legacy signatures and CSV component names are retained; CT means CTRV.
 Results retain full precision: paper CSV rounding is not applied here.
 
+The preserved paper runtime remains the default. The explicit context manager
+``evasive_acceleration.use_backend('v53')`` routes the same public interfaces
+to the certified continuous-time v53 engine without changing input semantics.
+
 Current OBB contact or no feasible direction within the search returns +inf.
 Invalid inputs return NaN; no predicted contact on the checked grids gives 0.
 """
@@ -62,16 +66,47 @@ def get_core_provenance() -> dict:
         name: hashlib.sha256((manifest.parent / name).read_bytes()).hexdigest()
         for name in ("verified_solver.py", "verified_calculator.py", "four_modes.py")
     }
+    from evasive_acceleration.backends import get_backend, _v53_provenance
+
+    if get_backend() == "v53":
+        active = _v53_provenance()
+        active.update({
+            "source": "Frozen validated v53 continuous-time runtime with a public-API adapter",
+            "adapter": "backends.compute_v53_modes routes the existing state/config interface to the frozen v53 kernels",
+            "runtime_policy": {
+                "candidate_acceptance": "Conservative continuous whole-horizon OBB safety certificate for every finite result",
+                "optimality": "Global acceleration lower/upper bracket closes to the requested absolute tolerance",
+                "current_contact": "Current OBB contact or overlap is conservatively reported as positive infinity",
+                "legacy_search_options": "Grid and direction options are accepted for signature compatibility; solver_tolerance controls v53 accuracy",
+                "missing_native_runtime": "Explicit setup error; never silently revert to the paper grid solver",
+            },
+            "aggregation": provenance["aggregation"],
+            "reference_csv_decimals": provenance["reference_csv_decimals"],
+            "reference_core_id": provenance["core_id"],
+            "reference_provenance": provenance,
+        })
+        return active
     return provenance
 
 
-@lru_cache(maxsize=1)
-def _get_bridge():
+@lru_cache(maxsize=2)
+def _get_bridge_for_backend(backend):
     # Lazy imports avoid the core_ea -> package -> single_frame import cycle.
     from evasive_acceleration._paper.config import EAConfig, MotionModel
-    from evasive_acceleration._paper.four_modes import compute_selected_modes
+    if backend == "v53":
+        from evasive_acceleration.backends import compute_v53_modes as compute_selected_modes
+    else:
+        from evasive_acceleration._paper.four_modes import compute_selected_modes
 
     return EAConfig, MotionModel, compute_selected_modes
+
+
+def _get_bridge():
+    # Read the context on every API call; caching an unkeyed bridge would leak
+    # v53 selection into later default calls or other async/thread contexts.
+    from evasive_acceleration.backends import get_backend
+
+    return _get_bridge_for_backend(get_backend())
 
 
 def aggregate_ea_modes(mode_dict: dict[str, float]) -> float:

@@ -48,6 +48,8 @@ jobs:
           python -m pip check
       - name: Check frozen paper sources and unchanged yaw-rate estimator
         run: python tools/check_core_integrity.py
+      - name: Check frozen v53 source snapshot
+        run: python tools/check_v53_integrity.py
       - name: Run tests
         run: python -m pytest -q
       - name: Run public examples
@@ -125,6 +127,56 @@ jobs:
           python -m pip check
       - name: Run identical tests against Numba backend
         run: python -m pytest -q
+
+  v53:
+    name: ${{ matrix.os }} / Python 3.12 / v53 native
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Prepare Windows GCC-compatible compiler
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+          update: false
+      - name: Add Windows compiler to PATH
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: cygpath -w /ucrt64/bin >> "$GITHUB_PATH"
+      - name: Install test and acceleration dependencies
+        run: python -m pip install -e ".[dev,batch,viz,fast]"
+      - name: Check both frozen numerical sources
+        run: |
+          python tools/check_core_integrity.py
+          python tools/check_v53_integrity.py
+      - name: Build native library before any EA timing
+        run: python -m evasive_acceleration.native_build
+      - name: Run complete API, history, geometry and native suite
+        run: python -m pytest -q
+      - name: Run v53 public examples and benchmark
+        run: |
+          python examples/v53_usage.py
+          ea --backend v53 single
+          ea --backend v53 batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_v53_batch
+          ea --backend v53 benchmark --max-frames 1 --output-dir outputs/ci_v53_benchmark
+      - name: Build and test isolated installed v53 wheel
+        run: |
+          python -m build --outdir outputs/ci_v53_dist
+          python tools/check_v53_wheel.py --wheel-dir outputs/ci_v53_dist
 
   notebook:
     name: Execute quickstart notebook

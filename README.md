@@ -19,6 +19,11 @@ This is the independent v2 development and review repository. The
 [original EA repository](https://github.com/AutoChengh/evasive-acceleration)
 is unchanged.
 
+This review branch also provides the opt-in **v53 solver**, with globally
+bounded numerical refinement and the same state and causal yaw-rate APIs.
+The default paper-compatible solver is retained. See [v53 setup, usage, and
+validation](docs/runtime_v53.md).
+
 ## Visual overview
 
 ### Paper Fig. 1: the EA framework
@@ -125,6 +130,18 @@ time. `python -m evasive_acceleration` accepts the same commands as `ea`.
 The `notebook` extra includes the interactive notebook and execution dependencies;
 it is not required for ordinary EA computation.
 
+To try v53, build its native component once, then select it explicitly:
+
+```bash
+python -m evasive_acceleration.native_build
+ea single --backend v53
+```
+
+The native build needs a C++ compiler; EA calls never compile it automatically.
+See the [v53 guide](docs/runtime_v53.md) for compiler setup, Python usage, and
+the complete [example](examples/v53_usage.py). Existing commands without
+`--backend v53` keep their previous solver.
+
 If repository access is restricted, Git cloning requires an authorized
 GitHub account. Use a separate virtual environment when comparing
 with the original version, because the Python distribution/import names remain
@@ -209,6 +226,18 @@ Both histories must end at the current decision time. The last history heading
 must match the corresponding current state. For continuous online use, keep
 one `CausalYawRateEWMA` instance per object; see the
 [yaw-rate method and API](docs/causal_yaw_rate.md).
+
+The same inputs work with v53 after its one-time setup:
+
+```python
+from evasive_acceleration import use_backend
+
+with use_backend("v53"):
+    ea = compute_ea(state_a, state_b)
+```
+
+Leaving the context restores the preceding backend. The yaw-rate estimator is
+unchanged; selecting a solver does not change heading preprocessing.
 
 ## Input conventions
 
@@ -336,6 +365,11 @@ The new comparison avoids initially overlapping boxes.
 
 ## What EA computes
 
+This section describes the retained default paper-compatible solver. The
+opt-in [v53 solver](docs/runtime_v53.md#what-changes-numerically) uses the same
+four-mode EA definition with continuous-time safety checks and a global
+0.001 m/s² upper/lower accuracy target.
+
 Two nominal motion models are used for each road user:
 
 - **CV:** constant speed and heading.
@@ -396,6 +430,14 @@ not a speed guarantee for another workload or machine; the complete result,
 including the observed tail and separately reported replays, is in the
 [runtime guide](docs/runtime.md). Minimal package installation is sufficient
 for the local benchmark; CSV processing and plotting extras are not required.
+
+In the separate frozen v53 acceptance run, all 857,820 raw frames had a mean
+of 0.154 ms and an observed maximum of 14.448 ms; the maximum across recorded
+stress/repeated tests was 15.820 ms. These measurements used a sufficiently
+warmed single CPU core on server 39103, not a universal timing guarantee.
+See the [v53 acceptance record](docs/runtime_v53.md#recorded-full-cohort-acceptance)
+for the precise conditions and numerical checks; select `--backend v53` to
+benchmark the integrated version on your machine.
 
 ## Generate GIFs from a source checkout
 

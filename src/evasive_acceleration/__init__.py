@@ -24,6 +24,7 @@ from yaw_rate import (
     causal_yawrate,
     wrap_angle_difference,
 )
+from .backends import BACKEND_NAMES, get_backend, use_backend
 
 __version__ = "0.3.0.dev1"
 
@@ -33,6 +34,9 @@ compute_ea_timed = compute_single_frame_ea_timed
 
 __all__ = [
     "__version__",
+    "BACKEND_NAMES",
+    "get_backend",
+    "use_backend",
     "RoadUserState",
     "RoadUserKinematicState",
     "compute_ea",
