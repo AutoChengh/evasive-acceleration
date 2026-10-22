@@ -53,9 +53,11 @@ two names; preprocessing stays outside the EA timer.
 ## What is timed
 
 Each `time.perf_counter_ns()` interval includes the complete four-mode solve
-and arithmetic mean for one interaction pair. Import, CSV parsing, state
-conversion, yaw-rate validation/estimation, compilation, warm-up, hashing and
-output writes are excluded.
+and arithmetic mean for one interaction pair. Import, CSV parsing and
+CSV-to-keyword preparation, provided yaw-rate validation/estimation,
+compilation, warm-up, hashing and output writes are excluded. Core input
+checks and configuration/NumPy-array construction remain inside the timed
+API call.
 
 Before measurement, the command evaluates every selected input at least once.
 The actual excluded warm-up count is `max(--warmup, number of selected inputs)`;

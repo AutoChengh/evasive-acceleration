@@ -390,7 +390,7 @@ and environment information. An existing output directory is never overwritten.
 A frozen 857,820-frame pass measured a mean of 0.154 ms and an observed maximum
 of 14.448 ms for one road-user pair's four-mode EA computation on a warmed
 single CPU core. This excludes perception, tracking, yaw-rate estimation and
-data preparation. All original observations, including nine `inf` results,
+CSV preparation. All original observations, including nine `inf` results,
 were retained. See the [runtime guide](docs/runtime.md) for the environment,
 timing boundary and complete statistics. Benchmark your own machine and inputs;
 these observed times are not a universal hard-real-time bound.

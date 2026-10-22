@@ -1,7 +1,8 @@
 """Portable warmed EA timing; no alternative solver or yaw-rate estimator.
 
-Import, parsing, conversion, warm-up, hashing and output writing are outside
-each measured interval. Every measured observation, including errors, is kept.
+Import, CSV parsing/preparation, warm-up, hashing and output writing are
+outside each interval. Core input checks and configuration/array construction
+remain inside the timed API. All measured observations, including errors, stay.
 """
 from __future__ import annotations
 

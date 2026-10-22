@@ -517,15 +517,16 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         help="State of agent B: x y speed heading length width yaw_rate",
     )
 
-    parser.add_argument("--coarse-sector-num", type=int, default=DEFAULT_COARSE_SECTOR_NUM)
-    parser.add_argument("--local-fine-half-window-deg", type=float, default=DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG)
-    parser.add_argument("--local-fine-dir-num", type=int, default=DEFAULT_LOCAL_FINE_DIR_NUM)
-    parser.add_argument("--fine-refine-ratio", type=float, default=DEFAULT_FINE_REFINE_RATIO)
+    # Accepted only for call compatibility; these do not control EA accuracy.
+    parser.add_argument("--coarse-sector-num", type=int, default=DEFAULT_COARSE_SECTOR_NUM, help=argparse.SUPPRESS)
+    parser.add_argument("--local-fine-half-window-deg", type=float, default=DEFAULT_LOCAL_FINE_HALF_WINDOW_DEG, help=argparse.SUPPRESS)
+    parser.add_argument("--local-fine-dir-num", type=int, default=DEFAULT_LOCAL_FINE_DIR_NUM, help=argparse.SUPPRESS)
+    parser.add_argument("--fine-refine-ratio", type=float, default=DEFAULT_FINE_REFINE_RATIO, help=argparse.SUPPRESS)
     parser.add_argument("--a-max", type=float, default=DEFAULT_A_MAX)
     parser.add_argument("--tol", type=float, default=DEFAULT_TOL)
     parser.add_argument("--T-total", type=float, default=DEFAULT_T_TOTAL)
-    parser.add_argument("--dt-coarse", type=float, default=DEFAULT_DT_COARSE)
-    parser.add_argument("--dt-fine", type=float, default=DEFAULT_DT_FINE)
+    parser.add_argument("--dt-coarse", type=float, default=DEFAULT_DT_COARSE, help=argparse.SUPPRESS)
+    parser.add_argument("--dt-fine", type=float, default=DEFAULT_DT_FINE, help=argparse.SUPPRESS)
     parser.add_argument("--size-scale", type=float, default=1.0)
 
     parser.add_argument(
