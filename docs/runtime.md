@@ -128,7 +128,7 @@ public adapter matched all 4,640 component outputs of the frozen numerical
 entry point; all 4,640 independent continuous-time safety checks passed.
 These are acceptance records, not a claim that a new GitHub commit has already
 passed hosted tests. The [machine-readable source record](data/ea_acceptance_20261022.json)
-retains original audit identifiers for traceability.
+preserves the measured results and source/build hashes for traceability.
 
 These times measure one road-user pair, not perception, tracking, trajectory
 prediction, yaw-rate estimation or scene-wide evaluation. Rebenchmark another

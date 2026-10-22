@@ -146,7 +146,7 @@ def compute_modes(state_values, config, pairs=None):
             state_values, config, pairs=selected_pairs, budget=budget,
         )
 
-    # Frozen v53's zero-yaw branch uses the preserved primitive's default
+    # EA's frozen zero-yaw branch uses the preserved primitive's default
     # budget. Adapt only this branch so a public custom tolerance is honoured.
     zero_pairs = tuple(pair for pair in selected_pairs
                        if _effective_yaw(state_values, pair) == (0.0, 0.0))

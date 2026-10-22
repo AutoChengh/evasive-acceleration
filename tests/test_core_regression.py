@@ -120,7 +120,7 @@ def test_fresh_import_orders_do_not_create_a_circular_import(first_import):
 
 
 @pytest.mark.parametrize("position", ["before", "after"])
-@pytest.mark.parametrize("old_name", ["paper", "v53"])
+@pytest.mark.parametrize("old_name", ["paper", "archived"])
 def test_removed_cli_backend_switch_is_rejected_not_silently_ignored(tmp_path, position, old_name):
     args = ["--backend", old_name, "single"] if position == "before" else ["single", "--backend", old_name]
     result = subprocess.run(

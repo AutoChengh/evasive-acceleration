@@ -4,14 +4,14 @@
 """
 visualize_tracks_to_gif.py
 
-Generate EA-colored GIF visualizations for interaction CSV files.
+Visualize computed EA values as GIFs for interaction CSV files.
 
 By default, CSV files are read from ../outputs/batch_results/ and GIFs are
 written to ../outputs/gifs/. These locations can be changed from the command
 line.
 
 Main features:
-1. Read all matching CSV files from the demo_data folder
+1. Read matching precomputed EA CSV files from the configured input directory
 2. Generate one GIF per CSV, colored by the EA column
 3. Show only the current positions of the two agents in each frame
 4. Optionally draw historical center trajectories

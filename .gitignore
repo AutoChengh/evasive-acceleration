@@ -194,7 +194,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Evasive Acceleration generated outputs
+# Generated EA results and visualization outputs, not source inputs
 outputs/
 demo_data/*_EA.csv
 visualization/gif_visualizations_by_EA/
