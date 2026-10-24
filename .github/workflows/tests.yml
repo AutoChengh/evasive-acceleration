@@ -68,6 +68,7 @@ jobs:
           ea single
           ea batch --input examples/data/without_yaw_rate.csv --skip-baselines --output-dir outputs/ci_batch
           python examples/comparison_case.py --output-dir outputs/ci_comparison --allow-font-fallback
+          python examples/real_interaction.py --case all --output-dir outputs/ci_real_interactions
           ea benchmark --max-frames 1 --output-dir outputs/ci_benchmark
       - name: Build and test source and wheel distributions in isolation
         run: |

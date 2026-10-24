@@ -1,16 +1,25 @@
 # Runnable examples
 
 The examples compute EA through the public interfaces.
-Start with:
+Start with the recorded interaction:
 
-- [comparison_case.py](comparison_case.py): recompute two synthetic equal-TTC
-  states with different EA, and export full inputs, results, settings, and a
-  Fig. 1-styled PNG. See [the comparison explanation](../docs/comparison_case.md).
+```bash
+python examples/real_interaction.py --output-dir outputs/real_interaction
+```
+
+The source data are included in `demo_data/`. The script recomputes every EA
+value and produces a vehicle-motion view and risk history, using Fig. 1's
+colors and regular Arial. [View the cases and outputs](../docs/real_interactions.md).
+
+Other entry points:
+
 - [from_dataframe.py](from_dataframe.py): map a custom long-form tracking table
   into the existing pairwise batch pipeline. See
   [the data-adaptation guide](../docs/bring_your_own_data.md).
-- [Interactive notebook](../notebooks/ea_quickstart.ipynb): run both workflows,
-  inspect causal yaw-rate provenance, and change an interaction manually.
+- [Interactive notebook](../notebooks/ea_quickstart.ipynb): an optional API and
+  tracking-table walkthrough with causal yaw-rate diagnostics.
+- [comparison_case.py](comparison_case.py): an optional synthetic equal-TTC
+  calculation check, separate from the real-data showcase.
 
 New figures require regular Arial; see [font and color setup](../docs/figure_style.md).
 For a labelled preview on a host without Arial, explicitly use

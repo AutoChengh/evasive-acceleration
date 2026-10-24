@@ -13,7 +13,7 @@ automated-driving safety.
 
 Paper: [Driving risk emerges from the required two-dimensional joint evasive acceleration](https://arxiv.org/abs/2604.17841).
 
-[Install and run](#install-and-run) · [Recomputable examples](#recomputable-examples) · [Python usage](#python-usage) · [Input conventions](#input-conventions) · [Measure runtime](#measure-runtime)
+[Install and run](#install-and-run) · [Run a real interaction](#run-a-real-interaction) · [Python usage](#python-usage) · [Input conventions](#input-conventions)
 
 This repository provides the official EA algorithm through the Python API,
 command line, and notebooks.
@@ -56,46 +56,23 @@ required evasive acceleration.
 
 A reconstructed T-bone crash from CIMSS-TA, using the same red-arrow encoding.
 
-## Recomputable examples
+## Run a real interaction
 
-Start with the question you want to answer:
+Follow a recorded intersection interaction from the inD dataset. The vehicle
+positions and EA history show how the required collision-avoidance effort
+changes as the interaction unfolds.
 
-| Goal | Entry point | What you get |
-|---|---|---|
-| Understand what EA adds to TTC | [Equal-TTC comparison](docs/comparison_case.md) | Two synthetic states, full inputs, actual EA/TTC/DRAC results, a figure, and settings. |
-| Use a tracking table with your own column names | [Bring your own data](docs/bring_your_own_data.md) | A copyable DataFrame adapter with explicit units, coordinate conversion, and causal yaw-rate handling. |
-| Explore interactively | [EA quickstart notebook](notebooks/ea_quickstart.ipynb) | Recompute the comparison, convert custom data, inspect risk/yaw-rate histories, and adjust two manual controls. |
-| Check computation speed on your machine | [Runtime benchmark](docs/runtime.md) | Warmed four-pairing timing, every observation, and recorded inputs, settings, and environment. |
+![Recorded inD interaction: vehicle positions at peak EA and the recomputed EA history](assets/figures/ea_real_interaction.png)
 
-After installing the visualization extras, reproduce the comparison with:
+After [installation](#install-and-run), reproduce this figure and every EA value:
 
 ```bash
-python examples/comparison_case.py --output-dir outputs/comparison_case
+python examples/real_interaction.py --output-dir outputs/real_interaction
 ```
 
-Both cases have TTC = 2.00 s, while EA is approximately
-0.500 and 0.886 m/s². These are explicitly synthetic illustrations, not paper
-experiment data or evidence for a universal safety threshold. EA permits
-two-dimensional relative avoidance, not only lane-constrained braking.
-
-New figures use [Fig. 1's palette and regular Arial](docs/figure_style.md), with
-no bold labels. Arial must be available for final exports; an explicitly
-enabled, warned font fallback is only for previews or hosted CI.
-
-## Interactive notebook
-
-From a source checkout:
-
-```bash
-python -m pip install -e ".[notebook]"
-python -m evasive_acceleration.native_build
-python -m notebook notebooks/ea_quickstart.ipynb
-```
-
-Run the cells in order. Each execution writes a fresh run directory, without
-replacing inputs or earlier runs. The notebook computes EA through the public
-API and example scripts. See the [notebook guide](notebooks/README.md)
-for font setup, hosted notebook use after publication, and headless execution.
+The input data are included; no dataset download is needed.
+[Inspect the case and a second real interaction](docs/real_interactions.md).
+For your own trajectories, start with the [tracking-table adapter](docs/bring_your_own_data.md).
 
 ## Install and run
 
@@ -135,6 +112,9 @@ launched automatically by an EA call. Missing dependencies fail explicitly.
 See the [setup and runtime guide](docs/runtime.md#prepare-the-native-component)
 for compiler selection and custom build paths. Source installation is shown
 here; this update does not imply a PyPI release.
+
+Optional tools: [interactive notebook](notebooks/README.md) ·
+[runtime benchmark](docs/runtime.md) · [figure style](docs/figure_style.md).
 
 ## Three ready-to-run inputs
 
@@ -340,7 +320,6 @@ in `src/baseline_risk_metrics.py`. For example, a non-conflicting TTC can be
 `inf`, which has a different meaning from an unbounded EA search result.
 The unchanged historical baseline also maps some undefined/current-overlap
 states to `0` or `inf`; do not interpret these values alone as a safe label.
-The new comparison avoids initially overlapping boxes.
 
 ## What EA computes
 
