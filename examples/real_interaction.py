@@ -19,9 +19,9 @@ from evasive_acceleration import RoadUserState, build_compute_kwargs, compute_ea
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = {
-    "crossing": {"input": "InD_05_tracks_266_267.csv", "title": "A real intersection interaction",
+    "crossing": {"input": "InD_05_tracks_266_267.csv",
                  "label": "inD recording 05 · tracks 266 / 267"},
-    "low-speed": {"input": "InD_18_tracks_417_424.csv", "title": "A real low-speed interaction",
+    "low-speed": {"input": "InD_18_tracks_417_424.csv",
                   "label": "inD recording 18 · tracks 417 / 424"},
 }
 FIELDS = ("Position X (m)", "Position Y (m)", "Velocity (m/s)", "Heading",
@@ -77,12 +77,9 @@ def plot_case(results, case="crossing", *, allow_font_fallback=None):
     origin = np.array([(a.x + b.x) / 2, (a.y + b.y) / 2])
     colors = FIG1_COLORS
     with figure_style(allow_font_fallback=allow_font_fallback) as font:
-        fig, (scene, history) = plt.subplots(1, 2, figsize=(11.6, 4.1),
+        fig, (scene, history) = plt.subplots(1, 2, figsize=(11.6, 3.4),
             gridspec_kw={"width_ratios": [1, 1.35]})
-        fig.subplots_adjust(left=.065, right=.975, bottom=.19, top=.76, wspace=.34)
-        fig.suptitle(CASES[case]["title"], x=.065, ha="left", y=.965, fontsize=16, fontweight="normal")
-        fig.text(.065, .865, "EA tracks changes in the required collision-avoidance effort.",
-                 fontsize=10, color=colors["ink"])
+        fig.subplots_adjust(left=.065, right=.975, bottom=.23, top=.91, wspace=.34)
         for prefix, state, color, label in (("", a, colors["green"], "Vehicle A"),
                                           ("2_", b, colors["gold"], "Vehicle B")):
             xy = results[[prefix+"Position X (m)", prefix+"Position Y (m)"]].to_numpy(float) - origin
@@ -99,7 +96,7 @@ def plot_case(results, case="crossing", *, allow_font_fallback=None):
         scene.set_ylim(-half_width/1.4,half_width/1.4)
         scene.set_aspect("equal", adjustable="box")
         scene.set_title("Vehicle positions at peak EA", fontsize=10, loc="left", pad=10)
-        scene.set_xlabel("Local x (m)");scene.set_ylabel("Local y (m)")
+        scene.set_xlabel("Position X (m)");scene.set_ylabel("Position Y (m)")
         scene.grid(alpha=.45);scene.margins(.12)
         scene.legend(loc="best", frameon=False, fontsize=9)
         elapsed = results["Elapsed time (s)"].to_numpy(float)
@@ -109,7 +106,7 @@ def plot_case(results, case="crossing", *, allow_font_fallback=None):
         history.axvline(elapsed[peak], color=colors["coral"], linewidth=.8, linestyle="--", alpha=.7)
         history.set_title(f"Peak EA = {risk[peak]:.3f} m/s² at {elapsed[peak]:.2f} s",
                           fontsize=11, loc="left", pad=10)
-        history.set_xlabel("Time from the first observation (s)");history.set_ylabel("EA (m/s²)")
+        history.set_xlabel("Time (s)");history.set_ylabel("EA (m/s²)")
         history.set_xlim(*figure_window(results));history.set_ylim(0, max(.05,float(risk.max())*1.18))
         history.grid(alpha=.45)
         fig.text(.065, .055, CASES[case]["label"],

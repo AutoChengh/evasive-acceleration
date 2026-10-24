@@ -83,15 +83,22 @@ def test_plot_failure_creates_no_output_directory(tmp_path,monkeypatch):
     assert not output.exists()
 
 
-def test_shared_figure_style_is_regular_and_no_control_arrow_claim(recorded):
+@pytest.mark.parametrize('case', ['crossing', 'low-speed'])
+def test_shared_figure_style_is_regular_and_no_control_arrow_claim(case):
     import matplotlib.pyplot as plt
     from matplotlib.text import Text
-    figure=example.plot_case(example.evaluate_frames(recorded),allow_font_fallback=True)
+    recorded=pd.read_csv(ROOT/'demo_data'/example.CASES[case]['input'])
+    figure=example.plot_case(example.evaluate_frames(recorded),case,allow_font_fallback=True)
     try:
         figure.canvas.draw()
         for text in figure.findobj(Text):
             assert text.get_fontweight() in ('normal',400)
-        assert 'EA (m/s²)' in [text.get_text() for text in figure.findobj(Text)]
+        scene,history=figure.axes
+        assert (scene.get_xlabel(),scene.get_ylabel())==('Position X (m)','Position Y (m)')
+        assert (history.get_xlabel(),history.get_ylabel())==('Time (s)','EA (m/s²)')
+        assert len(figure.texts)==1 or (
+            len(figure.texts)==2 and figure.texts[-1].get_text().startswith('Preview font: '))
+        assert figure.texts[0].get_text()==example.CASES[case]['label']
         assert 'Arrows indicate heading' in (ROOT/'docs/real_interactions.md').read_text(encoding='utf-8')
     finally:plt.close(figure)
 
